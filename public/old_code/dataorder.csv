@@ -1,0 +1,92 @@
+colm name > Column Name Show 
+
+*Basic Information
+iid > iid
+session > Session
+student_name_en > Student Name English
+student_name_bn > Student Name Bangla
+birth_registration > Birth Registration
+student_dateofbirth > Student Date of Birth
+religion > Religion
+student_gender > Student Gender
+student_blood_group > Blood Group
+
+*Attendance 
+rfid_card_no > RFID Card No
+
+*Class Information 2025
+class_2025 > Class 2025
+roll_2025 > Roll 2025
+section_2025 > Section 2025
+
+*Class Information 2026
+class_2026 > Class 2026
+roll_2026 > Roll 2026
+section_2026 > Section 2026
+
+*Father Information
+father_name_en > Father Name English
+father_name_bn > Father Name Bangla
+father_nid > Father NID
+father_mobile > Father Mobile
+father_occupation > Father Occupation
+father_dob > Father Date of Birth
+father_blood_group > Father Blood Group
+
+*Mother Information
+mother_name_en > Mother Name English
+mother_name_bn > Mother Name Bangla
+mother_nid > Mother NID
+mother_mobile > Mother Mobile
+mother_occupation > Mother Occupation
+mother_dob > Mother Date of Birth
+mother_blood_group > Mother Blood Group
+
+*Guardian Information
+guardian_name_en > Guardian Name English
+guardian_name_bn > Guardian Name Bangla
+guardian_nid > Guardian NID
+guardian_mobile > Guardian Mobile
+guardian_occupation > Guardian Occupation
+
+*Board Information
+board_name > Board Name
+board_roll > Board Roll
+board_registration > Board Registration
+group > Group
+optional_subject > Optional Subject
+school_reg_sl > School Reg Sl No
+
+
+*Address Information
+village_bn > Village Bangla
+village_en > Village English
+postoffice_bn > Post Office Bangla
+postoffice_en > Post Office English
+union_en > Union English
+union_bn > Union Bangla
+upazilla_bn > Upazila Bangla
+upazilla_en > Upazila English
+district_bn > District Bangla
+district_en > District English
+union_bn > Union Bangla
+union_en > Union English
+
+
+*Additional/Previous Information
+previous_school > Previous School
+admission_date > Admission Date
+previous_class_roll > Previous Class Roll
+comment_school > Comment School
+quote_freedomfighter > Quote Freedom Fighter
+
+*Tc Information
+status > Status
+tc_date > TC Date
+tc_no > TC No
+
+
+
+
+
+
