@@ -27,6 +27,7 @@ const fmtMobile = (num: any): string => {
 const CallGuardian: React.FC = () => {
   const navigate = useNavigate();
   const supabase = initSupabase();
+  const [teacher, setTeacher] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -34,6 +35,7 @@ const CallGuardian: React.FC = () => {
   useEffect(() => {
     checkAuth().then(async tData => {
       if (!tData) { navigate('/login'); return; }
+      setTeacher(tData);
       const cacheKey = `guardian:${tData.access_class}:${tData.access_section}`;
       const cached = cacheGet<any[]>(cacheKey);
       if (cached) { setStudents(cached); setLoading(false); return; }
@@ -65,21 +67,58 @@ const CallGuardian: React.FC = () => {
   }, [students, search]);
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
-      {/* Header */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #e2e8f0', padding: '10px 16px' }}>
-        <div style={{ maxWidth: 500, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate('/dashboard')} style={{ width: 34, height: 34, borderRadius: 10, border: 'none', background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>🔍</span>
-            <input 
-              type="text" placeholder="Search contacts..."
-              value={search} onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: 12, border: '1px solid #cbd5e1', outline: 'none', fontSize: 13, fontWeight: 700, background: '#fff' }}
-            />
+    <div style={{ minHeight: '100vh', background: C.orangeLight }}>
+      
+      <div style={{ maxWidth: 500, margin: '0 auto', padding: '16px 12px 0' }}>
+        {/* New Header Design */}
+        <div style={{ background: '#fff', borderRadius: 32, padding: '24px 20px', border: '1px solid #ffedd5', boxShadow: '0 10px 30px rgba(249,115,22,0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+             <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ fontSize: 24, color: C.orange }}>📞</span>
+                <h1 style={{ fontSize: 20, fontWeight: 900, color: '#431407', margin: 0, lineHeight: 1.2 }}>ছাত্র-ছাত্রীদের<br/>সাথে যোগাযোগ</h1>
+             </div>
+             <button onClick={() => navigate('/dashboard')} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: '#fff7ed', color: '#9a3412', padding: '10px 14px', borderRadius: 16, fontWeight: 800, fontSize: 13, borderBottom: '3px solid #ffedd5', textAlign: 'left' }}>
+               <span>←</span> <span>ড্যাশবোর্ড</span>
+             </button>
+          </div>
+
+          <div style={{ background: `linear-gradient(135deg, ${C.orange}, #f97316)`, borderRadius: 24, padding: '16px 20px', color: '#fff' }}>
+             <div style={{ display: 'flex', gap: 15, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                   <span style={{ fontSize: 16 }}>🏫</span>
+                   <span style={{ fontSize: 13, fontWeight: 900 }}>শ্রেণি: {teacher?.access_class || '–'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                   <span style={{ fontSize: 16 }}>👥</span>
+                   <span style={{ fontSize: 13, fontWeight: 900 }}>শাখা: {teacher?.access_section || '–'}</span>
+                </div>
+             </div>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.9 }}>
+                <span style={{ fontSize: 16 }}>👤</span>
+                <span style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>শিক্ষক: {teacher?.teacher_email}</span>
+             </div>
           </div>
         </div>
-      </header>
+
+        {/* Stats and Search */}
+        <div style={{ marginTop: 20 }}>
+           <div style={{ background: '#fff7ed', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 14, color: '#9a3412', marginBottom: 15 }}>
+              <span style={{ fontSize: 16 }}>🎓</span>
+              <span style={{ fontSize: 14, fontWeight: 900 }}>মোট: {filtered.length}</span>
+           </div>
+
+           <div style={{ position: 'relative' }}>
+              <input 
+                type="text" 
+                placeholder="নাম, রোল বা মোবাইল দিয়ে খুঁজুন..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: '100%', padding: '16px 45px 16px 20px', borderRadius: 20, border: '1px solid #ffedd5', background: '#fff', fontSize: 14, fontWeight: 800, color: '#431407', outline: 'none', boxShadow: '0 4px 12px rgba(249,115,22,0.03)' }}
+              />
+              <span style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', fontSize: 18, opacity: 0.4 }}>🔍</span>
+           </div>
+        </div>
+      </div>
 
       <main style={{ maxWidth: 500, margin: '0 auto', padding: '12px' }}>
         {loading ? (

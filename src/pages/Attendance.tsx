@@ -94,15 +94,30 @@ const Attendance: React.FC = () => {
 
   useEffect(() => {
     if (tab === 'my' && teacher) {
+      if (!teacher.teacher_rfid) {
+        setMyAttData([]);
+        setMyAttLoad(false);
+        return;
+      }
       setMyAttLoad(true);
       supabase.from('attendence_entry').select('*').eq('rfid_card_no', teacher.teacher_rfid).order('attendence_date', { ascending: false }).limit(25)
-        .then(({ data }: any) => { setMyAttData(data || []); setMyAttLoad(false); });
+        .then(({ data, error }: any) => { 
+          if (error) notify('error', 'Update Failed: Connection timed out.');
+          setMyAttData(data || []); 
+          setMyAttLoad(false); 
+        });
     }
     if (tab === 'history' && students.length) {
       setGLoad(true);
       const rfidCards = students.map(s => s.rfid_card_no).filter(Boolean);
+      if (!rfidCards.length) {
+        setGData([]);
+        setGLoad(false);
+        return;
+      }
       supabase.from('attendence_entry').select('attendence_date, rfid_card_no').in('rfid_card_no', rfidCards).order('attendence_date', { ascending: false }).limit(1000)
-        .then(({ data }: any) => {
+        .then(({ data, error }: any) => {
+          if (error) notify('error', 'Failed to fetch logs. Check connection.');
           const group: Record<string, Set<string>> = {};
           (data || []).forEach((entry: any) => {
             if (!group[entry.attendence_date]) group[entry.attendence_date] = new Set();

@@ -18,6 +18,7 @@ const StudentPhotos: React.FC = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth().then(async (tData) => {
@@ -30,7 +31,7 @@ const StudentPhotos: React.FC = () => {
         const assignments = tData.allAssignments || [{ access_class: tData.access_class, access_section: tData.access_section }];
         let all: any[] = [];
         for (const entry of assignments) {
-          const { data } = await supabase.from('student_database').select('iid, student_name_en, active_roll, student_photo_url, active_class, active_section')
+          const { data } = await supabase.from('student_database').select('iid, student_name_en, active_roll, student_photo_url, active_class, active_section, session')
             .eq('active_class', entry.access_class).eq('active_section', entry.access_section)
             .order('active_roll', { ascending: true });
           if (data) all = [...all, ...data];
@@ -71,23 +72,42 @@ const StudentPhotos: React.FC = () => {
             {filtered.map((s, idx) => (
               <div 
                 key={s.iid} 
-                onClick={() => navigate(`/student/${s.iid}`)}
                 style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.border}`, animation: `fadeIn 0.2s ease ${idx * 0.01}s both`, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
               >
-                <div style={{ position: 'relative', width: '100%', paddingTop: '110%', background: '#f1f5f9' }}>
+                <div 
+                  onClick={() => s.student_photo_url && setSelectedPhoto(s.student_photo_url)}
+                  style={{ position: 'relative', width: '100%', paddingTop: '110%', background: '#f1f5f9', cursor: 'pointer' }}
+                >
                   {s.student_photo_url ? (
                     <img src={s.student_photo_url} alt="p" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.currentTarget.style.display='none'} />
                   ) : <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: 24 }}>👤</div>}
                   <div style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(255,255,255,0.9)', padding: '1px 5px', borderRadius: 6, fontSize: 9, fontWeight: 900 }}>{s.active_roll}</div>
+                  <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'rgba(0,0,0,0.3)', color: '#fff', width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>🔍</div>
                 </div>
-                <div style={{ padding: '6px 8px' }}>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: C.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.student_name_en}</p>
+                <div onClick={() => navigate(`/student/${s.iid}`)} style={{ padding: '8px 6px', textAlign: 'center', cursor: 'pointer' }}>
+                  <p style={{ fontSize: 10, fontWeight: 800, color: C.text, margin: 0, lineHeight: 1.2 }}>{s.student_name_en}</p>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: C.orange, margin: '2px 0 0' }}>Session: {s.session}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
       </main>
+
+      {/* Photo Preview Modal */}
+      {selectedPhoto && (
+        <div 
+          onClick={() => setSelectedPhoto(null)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, animation: 'fadeIn 0.2s ease' }}
+        >
+          <img 
+            src={selectedPhoto} 
+            alt="Full" 
+            style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 12, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '3px solid #fff' }} 
+          />
+          <button style={{ position: 'absolute', top: 20, right: 20, width: 40, height: 40, borderRadius: '50%', border: 'none', background: '#fff', color: '#000', fontSize: 20, fontWeight: 900, cursor: 'pointer' }}>×</button>
+        </div>
+      )}
     </div>
   );
 };
