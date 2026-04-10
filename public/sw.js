@@ -1,5 +1,5 @@
-// Basic Service Worker for SPA
-const CACHE_NAME = 'fmhs-teachers-v1';
+// Service Worker Version: 1.0.1
+const CACHE_NAME = 'fmhs-teachers-v1.0.1';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

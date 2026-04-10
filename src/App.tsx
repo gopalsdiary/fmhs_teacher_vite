@@ -12,8 +12,10 @@ const StudentPhotos = lazy(() => import('./pages/StudentPhotos'));
 const CallGuardian  = lazy(() => import('./pages/CallGuardian'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Messaging     = lazy(() => import('./pages/Messaging'));
+const StudentChat   = lazy(() => import('./pages/StudentChat'));
 const MyInfo        = lazy(() => import('./pages/MyInfo'));
 import PWAInstall from './components/PWAInstall';
+import UpdateNotifier from './components/UpdateNotifier';
 
 // Minimal inline spinner – no external dependency
 const Spinner = () => (
@@ -43,12 +45,14 @@ const App: React.FC = () => {
           <Route path="/calls"          element={<CallGuardian />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/messages"       element={<Messaging />} />
+          <Route path="/student-chat"   element={<StudentChat />} />
           <Route path="/my-info"        element={<MyInfo />} />
           <Route path="/"               element={<Navigate to="/login" replace />} />
           <Route path="*"               element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
       <PWAInstall />
+      <UpdateNotifier />
     </Router>
   );
 };

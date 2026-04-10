@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { initSupabase, checkAuth } from '../auth-check';
+import { initSupabase, initMsgSupabase, checkAuth } from '../auth-check';
 
 const C = { 
   primary: '#f97316', 
@@ -31,6 +31,7 @@ const Messaging: React.FC = () => {
   
   const navigate = useNavigate();
   const supabase = initSupabase();
+  const msgSupabase = initMsgSupabase();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,11 +71,11 @@ const Messaging: React.FC = () => {
     if (!currentUser) return;
 
     const channelId = `notify:${currentUser.teacher_email}:${Date.now()}`;
-    const globalSub = supabase.channel(channelId)
+    const globalSub = msgSupabase.channel(channelId)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
-        table: 'messages',
+        table: 'fmhs_teacher_messages',
         filter: `recipient_email=eq.${currentUser.teacher_email}`
       }, (p) => {
         const sender = allTeachers.find(t => t.teacher_email_id?.toLowerCase() === p.new.sender_email?.toLowerCase());
@@ -100,7 +101,7 @@ const Messaging: React.FC = () => {
   };
 
   const updatePresence = async (email: string) => {
-    await supabase.from('teacher_presence').upsert({
+    await msgSupabase.from('teacher_presence').upsert({
       email,
       last_seen: new Date().toISOString(),
       status: 'online'
@@ -108,7 +109,7 @@ const Messaging: React.FC = () => {
   };
 
   const fetchPresence = async () => {
-    const { data } = await supabase.from('teacher_presence').select('*');
+    const { data } = await msgSupabase.from('teacher_presence').select('*');
     const pMap: Record<string, string> = {};
     data?.forEach(p => {
       const lastSeen = new Date(p.last_seen).getTime();
@@ -119,8 +120,8 @@ const Messaging: React.FC = () => {
   };
 
   const fetchRecentChats = async (myEmail: string, teachers: any[]) => {
-    const { data: msgs } = await supabase
-      .from('messages')
+    const { data: msgs } = await msgSupabase
+      .from('fmhs_teacher_messages')
       .select('*')
       .or(`sender_email.eq.${myEmail},recipient_email.eq.${myEmail}`)
       .order('created_at', { ascending: false });
@@ -149,8 +150,8 @@ const Messaging: React.FC = () => {
     if (!selectedRecipient || !currentUser) return;
 
     const markAsRead = async () => {
-      await supabase
-        .from('messages')
+      await msgSupabase
+        .from('fmhs_teacher_messages')
         .update({ is_read: true, read_at: new Date().toISOString() })
         .eq('recipient_email', currentUser.teacher_email)
         .eq('sender_email', selectedRecipient.email)
@@ -158,8 +159,8 @@ const Messaging: React.FC = () => {
     };
 
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
+      const { data } = await msgSupabase
+        .from('fmhs_teacher_messages')
         .select('*')
         .or(`and(sender_email.eq.${currentUser.teacher_email},recipient_email.eq.${selectedRecipient.email}),and(sender_email.eq.${selectedRecipient.email},recipient_email.eq.${currentUser.teacher_email})`)
         .order('created_at', { ascending: true });
@@ -169,8 +170,8 @@ const Messaging: React.FC = () => {
 
     fetchMessages();
 
-    const sub = supabase.channel(`room:${selectedRecipient.email}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (p) => {
+    const sub = msgSupabase.channel(`room:${selectedRecipient.email}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fmhs_teacher_messages' }, (p) => {
         if (p.eventType === 'INSERT') {
           const isRelated = (p.new.sender_email === currentUser.teacher_email && p.new.recipient_email === selectedRecipient.email) ||
                             (p.new.sender_email === selectedRecipient.email && p.new.recipient_email === currentUser.teacher_email);
@@ -197,7 +198,7 @@ const Messaging: React.FC = () => {
     const txt = newMessage.trim();
     setNewMessage('');
     setSending(true);
-    await supabase.from('messages').insert([{
+    await msgSupabase.from('fmhs_teacher_messages').insert([{
       sender_email: currentUser.teacher_email,
       recipient_email: selectedRecipient.email,
       message: txt

@@ -2,17 +2,26 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+const msgUrl = import.meta.env.VITE_SUPABASE_MSG_URL;
+const msgKey = import.meta.env.VITE_SUPABASE_MSG_KEY;
 
 let supabaseInstance: any = null;
+let msgSupabaseInstance: any = null;
 
 export const initSupabase = () => {
   if (!supabaseInstance) {
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Supabase env vars missing!');
-    }
+    if (!supabaseUrl || !supabaseKey) console.error('Supabase main env vars missing!');
     supabaseInstance = createClient(supabaseUrl, supabaseKey);
   }
   return supabaseInstance;
+};
+
+export const initMsgSupabase = () => {
+  if (!msgSupabaseInstance) {
+    if (!msgUrl || !msgKey) console.error('Supabase messaging env vars missing!');
+    msgSupabaseInstance = createClient(msgUrl, msgKey);
+  }
+  return msgSupabaseInstance;
 };
 
 // Singleton cache for teacher data

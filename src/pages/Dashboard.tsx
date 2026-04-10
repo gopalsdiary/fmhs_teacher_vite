@@ -61,6 +61,7 @@ const Dashboard: React.FC = () => {
       color: C.orange,
     },
     { title: 'Messaging', icon: '💬', to: '/messages', color: C.green },
+    { title: 'Student Chat', icon: '👨‍🎓', to: '/student-chat', color: '#1877F2' },
   ];
 
   return (
@@ -79,13 +80,13 @@ const Dashboard: React.FC = () => {
                 onClick={() => setShowSettings(true)} 
                 style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 10px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 11, fontWeight: 900, backdropFilter: 'blur(10px)', cursor: 'pointer' }}
               >
-                ⚙️ সেটিংস
+                ⚙️ Settings
               </button>
               <button 
-                onClick={async () => { if(confirm('লগআউট করবেন?')) { await authLogout(); navigate('/login'); } }} 
+                onClick={async () => { if(confirm('Confirm Logout?')) { await authLogout(); navigate('/login'); } }} 
                 style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 10px', borderRadius: 10, border: 'none', background: 'rgba(255,50,50,0.25)', color: '#fff', fontSize: 11, fontWeight: 900, backdropFilter: 'blur(10px)', cursor: 'pointer' }}
               >
-                🚪 লগআউট
+                🚪 Logout
               </button>
             </div>
           </div>
@@ -106,7 +107,7 @@ const Dashboard: React.FC = () => {
             const style = { background: '#fff', borderRadius: 28, padding: '24px 12px', textAlign: 'center', textDecoration: 'none', border: '1px solid #f1f5f9', boxShadow: '0 8px 20px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 };
             const content = (
               <>
-                <div style={{ width: 56, height: 56, borderRadius: 20, background: `${app.color}15`, color: app.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: `0 8px 16px ${app.color}10` }}>{app.icon}</div>
+                <div style={{ width: 56, height: 56, borderRadius: 20, background: `${app.color}15`, color: app.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: `0 8px 166px ${app.color}10` }}>{app.icon}</div>
                 <span style={{ color: C.text, fontSize: 13, fontWeight: 900 }}>{app.title}</span>
               </>
             );
@@ -120,7 +121,7 @@ const Dashboard: React.FC = () => {
           })}
         </div>
 
-        {/* Attendance Quick Access Section Card */}
+        {/* Attendance Tool Section Card */}
         <div style={{ background: '#fff', borderRadius: 28, padding: '24px 20px', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.02)', marginTop: 32 }}>
            <h4 style={{ fontSize: 13, fontWeight: 900, color: C.purple, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ width: 4, height: 18, background: C.purple, borderRadius: 2 }} />
@@ -143,8 +144,8 @@ const Dashboard: React.FC = () => {
 
         {/* Results Archive Section Card */}
         <div style={{ background: '#fff', borderRadius: 28, padding: '24px 20px', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.02)', marginTop: 24 }}>
-           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 4, height: 18, background: C.primary, borderRadius: 2 }} />
+           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.primary || C.purple, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 4, height: 18, background: C.primary || C.purple, borderRadius: 2 }} />
               Results Archive
            </h4>
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
@@ -169,8 +170,8 @@ const Dashboard: React.FC = () => {
 
         {/* Resources Section Card */}
         <div style={{ background: '#fff', borderRadius: 28, padding: '24px 20px', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.02)', marginTop: 24 }}>
-           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 4, height: 18, background: C.primary, borderRadius: 2 }} />
+           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.primary || C.purple, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 4, height: 18, background: C.primary || C.purple, borderRadius: 2 }} />
               Quick Resources
            </h4>
            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -193,33 +194,51 @@ const Dashboard: React.FC = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(20px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
            <div style={{ background: '#fff', borderRadius: 32, width: '100%', maxWidth: 400, padding: 30, position: 'relative', border: '1px solid #ffedd5' }}>
               <button onClick={() => setShowSettings(false)} style={{ position: 'absolute', top: 20, right: 20, border: 'none', background: '#f1f5f9', width: 32, height: 32, borderRadius: '50%', fontSize: 18, fontWeight: 900 }}>×</button>
-              <h2 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 24px', color: C.text }}>অ্যাপ সেটিংস</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 24px', color: C.text }}>App Settings</h2>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                  <button 
-                  onClick={() => { 
+                  onClick={async () => { 
+                    if (!confirm('Are you sure you want to reset the system? This will clear cache and refresh everything.')) return;
+                    
+                    // 1. Clear session cache
                     const keys = Object.keys(sessionStorage);
                     keys.forEach(k => { if(k.startsWith('cache:')) sessionStorage.removeItem(k); });
-                    alert('সিস্টেম রিসেট হয়েছে!');
+                    
+                    // 2. Clear Service Worker caches
+                    if ('serviceWorker' in navigator) {
+                      const swKeys = await caches.keys();
+                      await Promise.all(swKeys.map(key => caches.delete(key)));
+                      
+                      const registrations = await navigator.serviceWorker.getRegistrations();
+                      for (const registration of registrations) {
+                        await registration.unregister();
+                      }
+                    }
+
+                    // 3. Clear local storage specific to app
+                    localStorage.removeItem('app_version');
+                    
+                    alert('System reset successfully! The app will now reload.');
                     window.location.reload();
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: 20, cursor: 'pointer', textAlign: 'left' }}
                  >
                     <div style={{ fontSize: 24 }}>🔄</div>
                     <div>
-                       <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: C.text }}>সিস্টেম রিসেট</p>
-                       <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700, color: C.muted }}>ক্যাশ ক্লিয়ার এবং ডেটা রিফ্রেশ করুন</p>
+                       <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: C.text }}>System Reset</p>
+                       <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700, color: C.muted }}>Clear cache and refresh data</p>
                     </div>
                  </button>
-
+ 
                  <button 
                   onClick={() => navigate('/reset-password')}
                   style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 20, cursor: 'pointer', textAlign: 'left' }}
                  >
                     <div style={{ fontSize: 24 }}>🔐</div>
                     <div>
-                       <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: C.text }}>পাসওয়ার্ড রিসেট</p>
-                       <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700, color: C.muted }}>নিরাপদ রাখতে পাসওয়ার্ড পরিবর্তন করুন</p>
+                       <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: C.text }}>Password Reset</p>
+                       <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700, color: C.muted }}>Change password to keep it secure</p>
                     </div>
                  </button>
 
