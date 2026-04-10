@@ -1,13 +1,13 @@
 {
   "name": "FMHS Teachers",
   "short_name": "FMHS Teachers",
-  "description": "FMHS Teachers",
-  "start_url": "./teacher_dashboard.html",
+  "description": "FMHS Teachers Portal",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#667eea",
+  "background_color": "#fff7ed",
+  "theme_color": "#f97316",
   "orientation": "portrait-primary",
-  "scope": "./",
+  "scope": "/",
   "icons": [
     {
       "src": "./android-chrome-192x192.png",

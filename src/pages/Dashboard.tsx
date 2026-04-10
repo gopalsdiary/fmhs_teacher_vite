@@ -125,10 +125,10 @@ const Dashboard: React.FC = () => {
            <h4 style={{ fontSize: 11, fontWeight: 900, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, paddingLeft: 8 }}>Attendance Tools</h4>
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
               {[
-                { title: "Today's", to: '/attendance', icon: '📅', color: C.purple },
-                { title: 'History', to: '/attendance', icon: '🕒', color: C.green },
-                { title: 'Class', to: '/dashboard', icon: '🏫', color: C.blue },
-                { title: 'Teacher', to: '/dashboard', icon: '👨‍🏫', color: C.orange },
+                { title: "Today's", to: '/attendance?view=today', icon: '📅', color: C.purple },
+                { title: 'History', to: '/attendance?view=history', icon: '🕒', color: C.green },
+                { title: 'Class', to: '/attendance?view=history', icon: '🏫', color: C.blue },
+                { title: 'Teacher', to: '/attendance?view=my', icon: '👨‍🏫', color: C.orange },
               ].map((item, i) => (
                 <Link key={i} to={item.to} style={{ background: '#fff', borderRadius: 20, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', border: '1px solid #f1f5f9', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${item.color}15`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.icon}</div>

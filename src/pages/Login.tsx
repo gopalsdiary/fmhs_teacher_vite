@@ -14,6 +14,7 @@ const C = {
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ type: '', text: '' });
   const navigate = useNavigate();
@@ -69,13 +70,22 @@ const Login: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <label style={{ fontSize: 11, fontWeight: 900, color: C.muted, marginLeft: 4 }}>পাসওয়ার্ড</label>
-              <input 
-                type="password" 
-                placeholder="••••••••" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                style={{ padding: '16px 18px', borderRadius: 16, border: '1px solid #f1f5f9', background: '#f8fafc', outline: 'none', fontSize: 14, fontWeight: 700, color: C.text, transition: 'all 0.2s' }} 
-              />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="••••••••" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  style={{ width: '100%', padding: '16px 48px 16px 18px', borderRadius: 16, border: '1px solid #f1f5f9', background: '#f8fafc', outline: 'none', fontSize: 14, fontWeight: 700, color: C.text, transition: 'all 0.2s', boxSizing: 'border-box' }} 
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18, color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                >
+                  {showPassword ? '👁️' : '🙈'}
+                </button>
+              </div>
             </div>
             
             {msg.text && (
@@ -113,7 +123,7 @@ const Login: React.FC = () => {
           </form>
           
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <p style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>পাসওয়ার্ড ভুলে গেলে অ্যাডমিনের সাথে যোগাযোগ করুন</p>
+            <p style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>পাসওয়ার্ড ভুলে গেলে অফিসে যোগাযোগ করুন</p>
           </div>
         </div>
 
