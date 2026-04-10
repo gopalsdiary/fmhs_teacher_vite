@@ -2,6 +2,22 @@
 
 এই গাইডটি অনুসরণ করে আপনি আপনার শিক্ষার্থীর অ্যাপে টিচারদের সাথে চ্যাট করার অপশন যুক্ত করতে পারবেন। এটি মূল টিচার রিলেটেড ডাটাবেস এবং মেসেজিং ডাটাবেস উভয়ের সাথে কানেক্ট হবে।
 
+
+CREATE TABLE fmhs_attendance_notification_settings (
+    teacher_email text NOT NULL,
+    teacher_name text,
+    target_class text NOT NULL,
+    target_section text NOT NULL,
+    msg_template_text text DEFAULT 'সম্মানিত অভিভাবক, আপনার সন্তান {name} (রোল: {roll}) আজ বিদ্যালয়ে অনুপস্থিত।',
+    start_time time DEFAULT '09:30',
+    end_time time DEFAULT '11:30',
+    is_enabled boolean DEFAULT true,
+    updated_at timestamp with time zone DEFAULT now(),
+    PRIMARY KEY (teacher_email, target_class, target_section)
+);
+
+
+
 ## ১. এনভায়রনমেন্ট সেটআপ (.env)
 আপনার শিক্ষার্থীর অ্যাপের `.env` ফাইলে নিচের দুটি কি যোগ করুন (যদি আগে থেকে না থাকে):
 

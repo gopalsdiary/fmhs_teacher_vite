@@ -62,7 +62,7 @@ const Dashboard: React.FC = () => {
       color: C.orange,
     },
     { title: 'Messaging', icon: '💬', to: '/messages', color: C.green },
-    { title: 'Student Chat', icon: '👨‍🎓', to: '/student-chat', color: '#1877F2' },
+    { title: 'Message to Student', icon: '👨‍🎓', to: '/student-chat', color: '#1877F2' },
   ];
 
   return (

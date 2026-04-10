@@ -32,7 +32,7 @@ const MyInfo: React.FC = () => {
         .from('teacher_database')
         .select('*')
         .eq('teacher_email_id', user.teacher_email)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching teacher data:', error);
