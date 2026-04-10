@@ -77,7 +77,7 @@ const Messaging: React.FC = () => {
         schema: 'public', 
         table: 'fmhs_teacher_messages',
         filter: `recipient_email=eq.${currentUser.teacher_email}`
-      }, (p) => {
+      }, (p: any) => {
         const sender = allTeachers.find(t => t.teacher_email_id?.toLowerCase() === p.new.sender_email?.toLowerCase());
         showNotification(sender?.teacher_name_en || p.new.sender_email, p.new.message);
         fetchRecentChats(currentUser.teacher_email, allTeachers); 
@@ -111,7 +111,7 @@ const Messaging: React.FC = () => {
   const fetchPresence = async () => {
     const { data } = await msgSupabase.from('teacher_presence').select('*');
     const pMap: Record<string, string> = {};
-    data?.forEach(p => {
+    data?.forEach((p: any) => {
       const lastSeen = new Date(p.last_seen).getTime();
       const now = new Date().getTime();
       pMap[p.email] = (now - lastSeen < 60000) ? 'online' : 'offline';
@@ -129,7 +129,7 @@ const Messaging: React.FC = () => {
     if (!msgs) return;
 
     const chatMap = new Map();
-    msgs.forEach(m => {
+    msgs.forEach((m: any) => {
       const otherEmail = m.sender_email === myEmail ? m.recipient_email : m.sender_email;
       if (!chatMap.has(otherEmail)) {
         const teacherInfo = teachers.find(t => t.teacher_email_id?.toLowerCase() === otherEmail?.toLowerCase());
@@ -138,7 +138,7 @@ const Messaging: React.FC = () => {
           lastMessage: m.message,
           time: m.created_at,
           isRead: m.is_read || m.sender_email === myEmail,
-          unreadCount: msgs.filter(msg => msg.sender_email === otherEmail && msg.recipient_email === myEmail && !msg.is_read).length,
+          unreadCount: msgs.filter((msg: any) => msg.sender_email === otherEmail && msg.recipient_email === myEmail && !msg.is_read).length,
           teacher: teacherInfo || { teacher_name_en: otherEmail, designation_bn: 'Teacher' }
         });
       }
@@ -171,7 +171,7 @@ const Messaging: React.FC = () => {
     fetchMessages();
 
     const sub = msgSupabase.channel(`room:${selectedRecipient.email}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fmhs_teacher_messages' }, (p) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fmhs_teacher_messages' }, (p: any) => {
         if (p.eventType === 'INSERT') {
           const isRelated = (p.new.sender_email === currentUser.teacher_email && p.new.recipient_email === selectedRecipient.email) ||
                             (p.new.sender_email === selectedRecipient.email && p.new.recipient_email === currentUser.teacher_email);

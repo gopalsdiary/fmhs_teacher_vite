@@ -10,7 +10,8 @@ const C = {
   green: '#10b981',
   bg: '#fff7ed',     
   text: '#431407',   
-  muted: '#9a3412'   
+  muted: '#9a3412',
+  primary: '#f97316'
 };
 
 const Dashboard: React.FC = () => {
