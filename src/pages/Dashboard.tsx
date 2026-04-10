@@ -57,10 +57,10 @@ const Dashboard: React.FC = () => {
     { 
       title: 'My Info', 
       icon: '👤', 
-      to: teacher?.iid ? `https://admin.fmhs.edu.bd/login/teacher_view.html?iid=${teacher.iid}` : '#', 
+      to: '/my-info', 
       color: C.orange,
-      onClick: !teacher?.iid ? () => alert('Teacher IID not found. Please contact admin.') : undefined 
     },
+    { title: 'Messaging', icon: '💬', to: '/messages', color: C.green },
   ];
 
   return (
@@ -120,9 +120,12 @@ const Dashboard: React.FC = () => {
           })}
         </div>
 
-        {/* Attendance Quick Access */}
-        <div style={{ marginTop: 32 }}>
-           <h4 style={{ fontSize: 11, fontWeight: 900, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, paddingLeft: 8 }}>Attendance Tools</h4>
+        {/* Attendance Quick Access Section Card */}
+        <div style={{ background: '#fff', borderRadius: 28, padding: '24px 20px', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.02)', marginTop: 32 }}>
+           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.purple, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 4, height: 18, background: C.purple, borderRadius: 2 }} />
+              Attendance Tools
+           </h4>
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
               {[
                 { title: "Today's", to: '/attendance?view=today', icon: '📅', color: C.purple },
@@ -130,17 +133,20 @@ const Dashboard: React.FC = () => {
                 { title: 'Class', to: '/attendance?view=history', icon: '🏫', color: C.blue },
                 { title: 'Teacher', to: '/attendance?view=my', icon: '👨‍🏫', color: C.orange },
               ].map((item, i) => (
-                <Link key={i} to={item.to} style={{ background: '#fff', borderRadius: 20, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', border: '1px solid #f1f5f9', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                   <div style={{ width: 36, height: 36, borderRadius: 10, background: `${item.color}15`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.icon}</div>
+                <Link key={i} to={item.to} style={{ background: `${item.color}08`, borderRadius: 16, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', border: `1px solid ${item.color}15` }}>
+                   <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff', color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>{item.icon}</div>
                    <span style={{ color: C.text, fontSize: 13, fontWeight: 800 }}>{item.title}</span>
                 </Link>
               ))}
            </div>
         </div>
 
-        {/* Results Archive */}
-        <div style={{ marginTop: 32 }}>
-           <h4 style={{ fontSize: 11, fontWeight: 900, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, paddingLeft: 8 }}>Results Archive</h4>
+        {/* Results Archive Section Card */}
+        <div style={{ background: '#fff', borderRadius: 28, padding: '24px 20px', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.02)', marginTop: 24 }}>
+           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 4, height: 18, background: C.primary, borderRadius: 2 }} />
+              Results Archive
+           </h4>
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
               {[
                 { title: 'Annual 2022' },
@@ -153,25 +159,29 @@ const Dashboard: React.FC = () => {
                 { title: '9-10 Annual/Test 2025' },
                 { title: '6,7,8 Annual 2025' },
               ].map((item, i) => (
-                <div key={i} style={{ background: '#fff', borderRadius: 20, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #f1f5f9', opacity: 0.7 }}>
-                   <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📜</div>
+                <div key={i} style={{ background: '#f8fafc', borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid #f1f5f9', opacity: 0.8 }}>
+                   <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>📜</div>
                    <span style={{ color: C.text, fontSize: 11, fontWeight: 700, lineHeight: 1.3 }}>{item.title}</span>
                 </div>
               ))}
            </div>
         </div>
 
-        <div style={{ marginTop: 32 }}>
-           <h4 style={{ fontSize: 11, fontWeight: 900, color: C.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, paddingLeft: 8 }}>Resources</h4>
+        {/* Resources Section Card */}
+        <div style={{ background: '#fff', borderRadius: 28, padding: '24px 20px', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.02)', marginTop: 24 }}>
+           <h4 style={{ fontSize: 13, fontWeight: 900, color: C.primary, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 4, height: 18, background: C.primary, borderRadius: 2 }} />
+              Quick Resources
+           </h4>
            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
                 { title: 'School Website', url: 'https://fmhs.edu.bd/', icon: '🌐', color: C.blue },
                 { title: 'Student Portal', url: 'https://app.fmhs.edu.bd/', icon: '👨‍🎓', color: C.orange }
               ].map((link, i) => (
-                <a key={i} href={link.url} target="_blank" rel="noreferrer" style={{ background: '#fff', borderRadius: 20, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none', border: '1px solid #f1f5f9', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `${link.color}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{link.icon}</div>
+                <a key={i} href={link.url} target="_blank" rel="noreferrer" style={{ background: `${link.color}08`, borderRadius: 18, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none', border: `1px solid ${link.color}15` }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff', color: link.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>{link.icon}</div>
                   <span style={{ color: C.text, fontSize: 14, fontWeight: 800, flex: 1 }}>{link.title}</span>
-                  <span style={{ color: '#cbd5e1', fontSize: 18 }}>›</span>
+                  <span style={{ color: link.color, fontSize: 18, opacity: 0.5 }}>›</span>
                 </a>
               ))}
            </div>
@@ -215,7 +225,7 @@ const Dashboard: React.FC = () => {
 
                  <div style={{ marginTop: 12, padding: '12px 16px', background: '#f8fafc', borderRadius: 16, border: '1px solid #f1f5f9' }}>
                     <p style={{ margin: 0, fontSize: 10, fontWeight: 900, color: C.muted, textTransform: 'uppercase' }}>Current Version</p>
-                    <p style={{ margin: '4px 0 0', fontSize: 13, fontWeight: 800, color: C.text }}>v2.4.0 (Vite React)</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, fontWeight: 800, color: C.text }}>v2.4.0 (React App)</p>
                  </div>
               </div>
            </div>

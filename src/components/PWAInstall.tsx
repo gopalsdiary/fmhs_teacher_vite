@@ -99,7 +99,9 @@ const PWAInstall: React.FC = () => {
         border: '1px solid rgba(255,255,255,0.5)',
         animation: 'slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       }}>
-        <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #f97316, #fb923c)', color: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, boxShadow: '0 4px 10px rgba(249,115,22,0.3)' }}>🏛️</div>
+        <div style={{ width: 40, height: 40, borderRadius: 12, overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 10px rgba(249,115,22,0.3)' }}>
+          <img src="/android-chrome-192x192.png" alt="App Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
         
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={{ margin: 0, fontSize: 13, fontWeight: 900, color: '#431407' }}>Install Teacher App</h3>
