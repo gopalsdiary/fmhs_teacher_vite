@@ -37,7 +37,7 @@ const CallGuardian: React.FC = () => {
       if (!tData) { navigate('/login'); return; }
       setTeacher(tData);
       const cacheKey = `guardian:${tData.access_class}:${tData.access_section}`;
-      const cached = cacheGet<any[]>(cacheKey);
+      const cached = await cacheGet<any[]>(cacheKey);
       if (cached) { setStudents(cached); setLoading(false); return; }
 
       const assignments = tData.allAssignments || [{ access_class: tData.access_class, access_section: tData.access_section }];

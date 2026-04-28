@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { initSupabase, checkAuth } from '../auth-check';
-import { cacheGet, cacheSet } from '../cache';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 const C = {
   purple: '#6366f1',
@@ -17,18 +17,17 @@ const StudentList: React.FC = () => {
   const navigate = useNavigate();
   const supabase = initSupabase();
 
-  const [students, setStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [teacher, setTeacher] = useState<any>(null);
 
   const filterClass   = searchParams.get('class')   || searchParams.get('active_class');
   const filterSection = searchParams.get('section') || searchParams.get('active_section');
 
-  useEffect(() => {
-    (async () => {
+  const { data: studentsRaw, loading, isOffline } = useOfflineSync<any[]>({
+    key: `students:${filterClass}:${filterSection}`,
+    fetcher: async () => {
       const tData = await checkAuth();
-      if (!tData) { navigate('/login'); return; }
+      if (!tData) { navigate('/login'); throw new Error('Not authenticated'); }
       setTeacher(tData);
 
       const assignments = tData.allAssignments || [{ access_class: tData.access_class, access_section: tData.access_section }];
@@ -41,21 +40,17 @@ const StudentList: React.FC = () => {
         finalSection = assignments[0].access_section;
       }
 
-      const key = `students:${finalClass}:${finalSection}`;
-      const cached = cacheGet<any[]>(key);
-      if (cached) { setStudents(cached); setLoading(false); return; }
-
-      setLoading(true);
       const { data } = await supabase.from('student_database').select('*')
         .eq('active_class', finalClass).eq('active_section', finalSection)
         .order('active_roll', { ascending: true });
       
-      const res = data || [];
-      cacheSet(key, res);
-      setStudents(res);
-      setLoading(false);
-    })();
-  }, [filterClass, filterSection]);
+      return data || [];
+    },
+    enabled: true
+  });
+
+  const students = studentsRaw || [];
+
 
   const filtered = useMemo(() => {
     if (!searchTerm) return students;

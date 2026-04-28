@@ -9,20 +9,23 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.0",
-    "typescript": "^5.2.2",
-    "vite": "^8.0.8"
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "vite-plugin-pwa": "^1.2.0",
+    "workbox-window": "^7.4.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "clsx": "^2.1.1",
+    "idb-keyval": "^6.2.2",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-router-dom": "^7.14.0",
+    "react-router-dom": "^7.14.2",
     "tailwind-merge": "^3.5.0"
   }
 }

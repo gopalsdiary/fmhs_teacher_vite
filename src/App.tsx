@@ -24,6 +24,35 @@ const Spinner = () => (
     <p style={{ color: '#667eea', fontWeight: 600, fontSize: 14 }}>Loading…</p>
   </div>
 );
+const OfflineStatus = () => {
+  const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  if (!isOffline) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+      background: '#ef4444', color: 'white', padding: '8px 16px', borderRadius: 20,
+      fontSize: 12, fontWeight: 700, boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+      zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8,
+      animation: 'slideUp 0.3s ease-out'
+    }}>
+      <span style={{ width: 8, height: 8, background: 'white', borderRadius: '50%', animation: 'pulse 1.5s infinite' }} />
+      You are currently offline. Working from cache.
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   // Kick off auth fetch immediately so it's cached by the time any page loads
@@ -53,6 +82,7 @@ const App: React.FC = () => {
       </Suspense>
       <PWAInstall />
       <UpdateNotifier />
+      <OfflineStatus />
     </Router>
   );
 };

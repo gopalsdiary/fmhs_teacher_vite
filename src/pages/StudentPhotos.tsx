@@ -24,7 +24,7 @@ const StudentPhotos: React.FC = () => {
     checkAuth().then(async (tData) => {
       if (!tData) { navigate('/login'); return; }
       const cacheKey = `photos:${tData.access_class}:${tData.access_section}`;
-      const cached = cacheGet<any[]>(cacheKey);
+      const cached = await cacheGet<any[]>(cacheKey);
       if (cached) { setStudents(cached); setLoading(false); return; }
 
       try {

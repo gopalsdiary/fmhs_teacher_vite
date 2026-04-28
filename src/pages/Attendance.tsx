@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { initSupabase, checkAuth } from '../auth-check';
 import { cacheGet, cacheSet } from '../cache';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import { useOfflineMutation } from '../hooks/useOfflineMutation';
 
 const C = { 
   purple: '#6366f1', 
@@ -66,7 +68,7 @@ const Attendance: React.FC = () => {
     setLoading(true);
     try {
       const studKey = `att-students:${teacher.access_class}:${teacher.access_section}`;
-      let unique = cacheGet<any[]>(studKey);
+      let unique = await cacheGet<any[]>(studKey);
       if (!unique) {
         const asgn = teacher.allAssignments || [{ access_class: teacher.access_class, access_section: teacher.access_section }];
         let all: any[] = [];
@@ -77,8 +79,9 @@ const Attendance: React.FC = () => {
           if (data) all = [...all, ...data];
         }
         unique = all.filter((s, i, self) => i === self.findIndex(t => t.iid === s.iid));
-        cacheSet(studKey, unique);
+        await cacheSet(studKey, unique);
       }
+
       setStudents(unique);
 
       const rfidCards = unique.map(s => s.rfid_card_no ? String(s.rfid_card_no).trim() : '').filter(Boolean);
@@ -168,10 +171,45 @@ const Attendance: React.FC = () => {
   const isToday = date === new Date().toISOString().split('T')[0];
   const mark = (id: string, status: 'present' | 'absent') => { if(isToday) setAtt(p => ({ ...p, [id]: status })); };
 
+  const { mutate: performSave, isSyncing, pendingCount } = useOfflineMutation({
+    action: 'save-attendance',
+    executor: async (payload: any) => {
+      const { toInsert, toDelete, date } = payload;
+      const now = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour12: false });
+      
+      if (toInsert.length > 0) {
+        const ins = toInsert.map((s: any) => ({ 
+          rfid_card_no: `MANUAL-${s.iid}`, 
+          attendence_date: date, 
+          attendence_time: now,
+          attendence_status: 'M'
+        }));
+        await supabase.from('attendence_entry').insert(ins);
+      }
+      
+      if (toDelete.length > 0) {
+        const manualCards = toDelete.map((s: any) => `MANUAL-${s.iid}`);
+        await supabase.from('attendence_entry').delete()
+          .eq('attendence_date', date)
+          .eq('attendence_status', 'M')
+          .in('rfid_card_no', manualCards);
+      }
+      return { success: true };
+    },
+    onSuccess: (res: any) => {
+      if (res?.queued) {
+        notify('success', 'Saved offline! Will sync when online.');
+      } else {
+        notify('success', '✓ Synced with server!');
+        loadData(date);
+      }
+    },
+    onError: (err) => notify('error', 'Failed to save: ' + err.message)
+  });
+
   const save = async () => {
     if (!isToday) { notify('error', 'Only today!'); return; }
     
-    // Logic: Compare current 'att' state with records already in DB
     const toInsert = students.filter(s => {
       const isMarked = att[s.iid] === 'present';
       const alreadyInDb = iidMap[String(s.iid)] || (s.rfid_card_no && !isGeneric(s.rfid_card_no) && rfid[String(s.rfid_card_no).trim()]);
@@ -180,7 +218,7 @@ const Attendance: React.FC = () => {
 
     const toDelete = students.filter(s => {
       const isAbsent = att[s.iid] === 'absent';
-      const manualRecord = iidMap[String(s.iid)]; // Only allowed to delete manual records
+      const manualRecord = iidMap[String(s.iid)];
       return isAbsent && manualRecord && manualRecord.status === 'M';
     });
 
@@ -191,31 +229,14 @@ const Attendance: React.FC = () => {
 
     setSaving(true);
     try {
-      const now = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Dhaka', hour12: false });
-      
-      if (toInsert.length > 0) {
-        const ins = toInsert.map(s => ({ 
-          rfid_card_no: `MANUAL-${s.iid}`, 
-          attendence_date: date, 
-          attendence_time: now,
-          attendence_status: 'M'
-        }));
-        await supabase.from('attendence_entry').insert(ins);
-      }
-      
-      if (toDelete.length > 0) {
-        const manualCards = toDelete.map(s => `MANUAL-${s.iid}`);
-        await supabase.from('attendence_entry').delete()
-          .eq('attendence_date', date)
-          .eq('attendence_status', 'M')
-          .in('rfid_card_no', manualCards);
-      }
-
-      notify('success', '✓ Updated!');
-      await loadData(date);
-    } catch (e: any) { notify('error', e.message); }
-    finally { setSaving(false); }
+      await performSave({ toInsert, toDelete, date });
+    } catch (e: any) {
+      // Error handled by mutation hook
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   const reset = async () => {
     if (!isToday) { notify('error', 'Only today!'); return; }
@@ -263,6 +284,11 @@ const Attendance: React.FC = () => {
             <span style={{ fontSize: 11, fontWeight: 900, color: C.green }}>{statVals.present}</span>
             <span style={{ fontSize: 11, fontWeight: 900, color: C.red }}>{statVals.absent}</span>
           </div>
+          {pendingCount > 0 && (
+            <div style={{ background: C.orange, color: 'white', borderRadius: 10, padding: '4px 10px', fontSize: 10, fontWeight: 900, animation: 'pulse 2s infinite' }}>
+              SYNCING ({pendingCount})
+            </div>
+          )}
         </div>
         <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', padding: '0 8px' }}>
           {['today', 'history', 'students', 'my'].map(t => (

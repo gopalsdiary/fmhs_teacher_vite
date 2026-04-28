@@ -32,10 +32,10 @@ const StudentDetails: React.FC = () => {
     const fetchData = async () => {
       if (!iid) return;
       const cacheKey = `student:${iid}`;
-      const cached = cacheGet<any>(cacheKey);
+      const cached = await cacheGet<any>(cacheKey);
       
       const loadSpec = async () => {
-        const specCached = cacheGet<ColumnSpec[]>('dataorder');
+        const specCached = await cacheGet<ColumnSpec[]>('dataorder');
         if (specCached) { setColumnSpec(specCached); return; }
         try {
           const res = await fetch('/dataorder.csv');

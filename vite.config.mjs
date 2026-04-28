@@ -2,10 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { VitePWA } from 'vite-plugin-pwa';
+import { writeFileSync, existsSync, mkdirSync } from 'fs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
 
 // Custom plugin to auto-generate version.json
 const autoVersion = () => ({
@@ -23,7 +23,70 @@ const autoVersion = () => ({
 });
 
 export default defineConfig({
-  plugins: [react(), autoVersion()],
+  plugins: [
+    react(), 
+    autoVersion(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'android-chrome-512x512.png'],
+      manifest: {
+        name: 'FMHS Teachers',
+        short_name: 'FMHS Teachers',
+        description: 'FMHS Teachers Portal - Advanced Offline Support',
+        theme_color: '#f97316',
+        background_color: '#fff7ed',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'supabase-api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              }
+            }
+          }
+        ]
+      }
+    })
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -42,3 +105,4 @@ export default defineConfig({
     open: false,
   },
 });
+
