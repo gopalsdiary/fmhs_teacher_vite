@@ -30,11 +30,35 @@ const OfflineStatus = () => {
   React.useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
+    
+    // Prevent refresh while offline logic
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!navigator.onLine) {
+        e.preventDefault();
+        e.returnValue = ''; // Shows the browser confirmation dialog
+      }
+    };
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (!navigator.onLine) {
+        // F5, Ctrl+R, Cmd+R
+        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r')) {
+          e.preventDefault();
+          alert('Refreshing while offline is disabled to prevent data loss. Please wait for connection.');
+        }
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeydown);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('keydown', handleKeydown);
     };
   }, []);
 
@@ -49,7 +73,7 @@ const OfflineStatus = () => {
       animation: 'slideUp 0.3s ease-out'
     }}>
       <span style={{ width: 8, height: 8, background: 'white', borderRadius: '50%', animation: 'pulse 1.5s infinite' }} />
-      You are currently offline. Working from cache.
+      Offline. Don't Refresh.
     </div>
   );
 };

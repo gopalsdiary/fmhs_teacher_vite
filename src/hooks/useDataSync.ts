@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { initSupabase, checkAuth } from '../auth-check';
 import { cacheSet, cacheGet } from '../cache';
 
@@ -7,6 +7,8 @@ export function useDataSync() {
   const [progress, setProgress] = useState(0);
 
   const syncAllData = useCallback(async () => {
+    if (!navigator.onLine) return; // Prevent sync if offline
+    
     setSyncing(true);
     setProgress(0);
     const supabase = initSupabase();
@@ -102,6 +104,19 @@ export function useDataSync() {
       setSyncing(false);
     }
   }, []);
+
+  // Automatically sync when coming back online if data is stale
+  useEffect(() => {
+    const handleOnline = () => {
+      const lastSync = localStorage.getItem('last_full_sync');
+      const syncAge = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
+      if (syncAge > 3600000) { // 1 hour
+        syncAllData();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [syncAllData]);
 
   return { syncAllData, syncing, progress };
 }

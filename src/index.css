@@ -6,7 +6,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html { font-size: 16px; scroll-behavior: smooth; }
+html { 
+  font-size: 16px; 
+  scroll-behavior: smooth; 
+  overscroll-behavior-y: contain; 
+}
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -15,6 +19,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: contain;
 }
 
 a { text-decoration: none; color: inherit; }
