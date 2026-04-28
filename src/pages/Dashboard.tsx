@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { checkAuth, logout as authLogout, initSupabase } from '../auth-check';
 import { cacheGet, cacheSet } from '../cache';
+import { useDataSync } from '../hooks/useDataSync';
 
 const C = {
   purple: '#f97316', 
@@ -42,6 +43,8 @@ const Dashboard: React.FC = () => {
     return C.purple;
   };
 
+  const { syncAllData, syncing, progress } = useDataSync();
+
   useEffect(() => {
     fetch('/dashboard_link.csv')
       .then(res => res.text())
@@ -67,26 +70,19 @@ const Dashboard: React.FC = () => {
       else { 
         setTeacher(d); 
         setLoading(false); 
-        const supabase = initSupabase();
-        const asgn = d.allAssignments || [{ access_class: d.access_class, access_section: d.access_section }];
-        const cacheKey = `students:${d.access_class}:${d.access_section}`;
-        if (!cacheGet(cacheKey)) {
-          (async () => {
-             let all: any[] = [];
-             for (const a of asgn) {
-               const { data } = await supabase.from('student_database')
-                 .select('iid, student_name_en, student_name_bn, active_roll, student_photo_url, active_class, active_section, session, father_name_en, father_mobile')
-                 .eq('active_class', a.access_class).eq('active_section', a.access_section)
-                 .order('active_roll', { ascending: true });
-               if (data) all = [...all, ...data];
-             }
-             const unique = all.filter((s, i, self) => i === self.findIndex(t => t.iid === s.iid));
-             cacheSet(cacheKey, unique);
-          })();
+        
+        // Automated background sync
+        const lastSync = localStorage.getItem('last_full_sync');
+        const syncAge = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
+        
+        // Sync if older than 1 hour or never synced
+        if (syncAge > 3600000) {
+          syncAllData();
         }
       }
     });
-  }, [navigate]);
+  }, [navigate, syncAllData]);
+
 
   if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}><div style={{ width: 32, height: 32, border: '3px solid #eee', borderTopColor: C.purple, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>;
 
@@ -139,6 +135,17 @@ const Dashboard: React.FC = () => {
                 <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, margin: '2px 0 0' }}>Class: {teacher?.access_class} • Sec: {teacher?.access_section}</p>
              </div>
           </div>
+          {syncing && (
+            <div style={{ marginTop: 15, background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: '10px 15px', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>SYNCING STUDENT DATA...</span>
+                <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>{progress}%</span>
+              </div>
+              <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, height: '100%', background: '#fff', transition: 'width 0.3s' }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

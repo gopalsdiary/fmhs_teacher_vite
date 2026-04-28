@@ -38,8 +38,14 @@ const Login: React.FC = () => {
       // Use helper to set session and clear stale promises
       const { setSession } = await import('../auth-check');
       setSession(email);
+      
+      // Trigger background sync but don't await it to avoid blocking UI
+      // We can't use hooks inside the click handler directly, 
+      // but we can import the logic or just let the next page (Dashboard) handle it.
+      // Better to trigger it in Dashboard or a global provider.
       navigate('/dashboard'); 
     }
+
   };
 
   return (
