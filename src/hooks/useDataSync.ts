@@ -60,7 +60,7 @@ export function useDataSync() {
           await cacheSet(attKey, data);
           
           // 3. Save to Photos Cache (for Gallery)
-          const uniqueForPhotos = data.filter((s, idx, self) => idx === self.findIndex((t) => t.iid === s.iid));
+          const uniqueForPhotos = data.filter((s: any, idx: number, self: any[]) => idx === self.findIndex((t: any) => t.iid === s.iid));
           await cacheSet(photosKey, uniqueForPhotos);
           
           // 4. Save INDIVIDUAL students to cache for the /student/:iid page
