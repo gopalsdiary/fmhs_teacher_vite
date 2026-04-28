@@ -18,9 +18,50 @@ const Dashboard: React.FC = () => {
   const [teacher, setTeacher] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [dashboardLinks, setDashboardLinks] = useState<any[]>([]);
   const navigate = useNavigate();
 
+  const getIcon = (name: string) => {
+    if (name.toLowerCase().includes('website')) return '🌐';
+    if (name.toLowerCase().includes('portal')) return '👨‍🎓';
+    if (name.toLowerCase().includes('admission')) return '📝';
+    if (name.toLowerCase().includes('board')) return '🏛️';
+    if (name.toLowerCase().includes('facebook')) return '📱';
+    if (name.toLowerCase().includes('মাউশি')) return '📖';
+    if (name.toLowerCase().includes('মুক্তপাঠ')) return '🎓';
+    if (name.toLowerCase().includes('mpo')) return '📄';
+    return '🔗';
+  };
+
+  const getColor = (name: string) => {
+    if (name.toLowerCase().includes('website')) return C.blue;
+    if (name.toLowerCase().includes('portal')) return C.orange;
+    if (name.toLowerCase().includes('admission')) return C.purple;
+    if (name.toLowerCase().includes('board')) return C.green;
+    if (name.toLowerCase().includes('facebook')) return '#1877F2';
+    return C.purple;
+  };
+
   useEffect(() => {
+    fetch('/dashboard_link.csv')
+      .then(res => res.text())
+      .then(text => {
+        const lines = text.trim().split('\n');
+        if (lines.length > 1) {
+          const links = lines.slice(1)
+            .map(line => {
+              const parts = line.split(',');
+              if (parts.length < 3) return null;
+              const name = parts[1].trim();
+              const url = parts[2].trim();
+              return { title: name, url, icon: getIcon(name), color: getColor(name) };
+            })
+            .filter((link): link is any => link !== null);
+          setDashboardLinks(links);
+        }
+      })
+      .catch(e => console.error('Error loading links', e));
+
     checkAuth().then(d => {
       if (!d) navigate('/login');
       else { 
@@ -175,18 +216,28 @@ const Dashboard: React.FC = () => {
               <span style={{ width: 4, height: 18, background: C.primary || C.purple, borderRadius: 2 }} />
               Quick Resources
            </h4>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                { title: 'School Website', url: 'https://fmhs.edu.bd/', icon: '🌐', color: C.blue },
-                { title: 'Student Portal', url: 'https://app.fmhs.edu.bd/', icon: '👨‍🎓', color: C.orange }
-              ].map((link, i) => (
-                <a key={i} href={link.url} target="_blank" rel="noreferrer" style={{ background: `${link.color}08`, borderRadius: 18, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none', border: `1px solid ${link.color}15` }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff', color: link.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>{link.icon}</div>
-                  <span style={{ color: C.text, fontSize: 14, fontWeight: 800, flex: 1 }}>{link.title}</span>
-                  <span style={{ color: link.color, fontSize: 18, opacity: 0.5 }}>›</span>
-                </a>
-              ))}
-           </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {dashboardLinks.length > 0 ? (
+                dashboardLinks.map((link, i) => (
+                  <a key={i} href={link.url} target="_blank" rel="noreferrer" style={{ background: `${link.color}08`, borderRadius: 18, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none', border: `1px solid ${link.color}15` }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff', color: link.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>{link.icon}</div>
+                    <span style={{ color: C.text, fontSize: 14, fontWeight: 800, flex: 1 }}>{link.title}</span>
+                    <span style={{ color: link.color, fontSize: 18, opacity: 0.5 }}>›</span>
+                  </a>
+                ))
+              ) : (
+                [
+                  { title: 'School Website', url: 'https://fmhs.edu.bd/', icon: '🌐', color: C.blue },
+                  { title: 'Student Portal', url: 'https://app.fmhs.edu.bd/', icon: '👨‍🎓', color: C.orange }
+                ].map((link, i) => (
+                  <a key={i} href={link.url} target="_blank" rel="noreferrer" style={{ background: `${link.color}08`, borderRadius: 18, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none', border: `1px solid ${link.color}15` }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff', color: link.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }}>{link.icon}</div>
+                    <span style={{ color: C.text, fontSize: 14, fontWeight: 800, flex: 1 }}>{link.title}</span>
+                    <span style={{ color: link.color, fontSize: 18, opacity: 0.5 }}>›</span>
+                  </a>
+                ))
+              )}
+            </div>
         </div>
       </main>
 
