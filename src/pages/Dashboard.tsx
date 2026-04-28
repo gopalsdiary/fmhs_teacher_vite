@@ -291,6 +291,17 @@ const Dashboard: React.FC = () => {
                  </button>
  
                  <button 
+                  onClick={() => { syncAllData(); setShowSettings(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: '#ecfdf5', border: '1px solid #d1fae5', borderRadius: 20, cursor: 'pointer', textAlign: 'left' }}
+                 >
+                    <div style={{ fontSize: 24 }}>☁️</div>
+                    <div>
+                       <p style={{ margin: 0, fontSize: 14, fontWeight: 900, color: C.text }}>Sync Data</p>
+                       <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700, color: C.muted }}>Force sync all student records</p>
+                    </div>
+                 </button>
+
+                 <button 
                   onClick={() => navigate('/reset-password')}
                   style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 20, cursor: 'pointer', textAlign: 'left' }}
                  >
