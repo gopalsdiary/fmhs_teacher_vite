@@ -20,6 +20,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [dashboardLinks, setDashboardLinks] = useState<any[]>([]);
+  const [enabledExams, setEnabledExams] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const getIcon = (name: string) => {
@@ -64,6 +65,34 @@ const Dashboard: React.FC = () => {
         }
       })
       .catch(e => console.error('Error loading links', e));
+
+    const fetchEnabledExams = async () => {
+      // 1. Try local cache first for instant display
+      const cached = await cacheGet<any[]>('enabled_exams');
+      if (cached) {
+        setEnabledExams(cached);
+      }
+
+      // 2. Fetch from Supabase if online
+      if (navigator.onLine) {
+        try {
+          const supabase = initSupabase();
+          const { data, error } = await supabase
+            .from('FMHS_exams_names')
+            .select('*')
+            .eq('teacher_entry_enabled', true);
+          if (error) throw error;
+          if (data) {
+            setEnabledExams(data);
+            await cacheSet('enabled_exams', data);
+          }
+        } catch (e) {
+          console.error('Error fetching enabled exams:', e);
+        }
+      }
+    };
+
+    fetchEnabledExams();
 
     checkAuth().then(d => {
       if (!d) navigate('/login');
@@ -150,6 +179,86 @@ const Dashboard: React.FC = () => {
       </div>
 
       <main style={{ maxWidth: 600, margin: '0 auto', padding: '28px 16px' }}>
+        {enabledExams.length > 0 && (
+          <div style={{ 
+            background: 'linear-gradient(135deg, #f97316, #fb923c)',
+            borderRadius: 28, 
+            padding: '24px', 
+            marginBottom: 24, 
+            border: '1px solid rgba(255, 255, 255, 0.2)', 
+            boxShadow: '0 12px 30px rgba(249, 115, 22, 0.15)',
+            color: '#fff',
+            position: 'relative',
+            overflow: 'hidden',
+            animation: 'fadeIn 0.5s ease-out'
+          }}>
+            <div style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.12)', filter: 'blur(10px)' }} />
+            <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.08)', filter: 'blur(5px)' }} />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: 8, 
+                height: 8, 
+                backgroundColor: '#10b981', 
+                borderRadius: '50%', 
+                boxShadow: '0 0 10px #10b981, 0 0 20px #10b981',
+                animation: 'pulse 1.5s infinite'
+              }} />
+              <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1.5, color: 'rgba(255, 255, 255, 0.9)' }}>
+                TEACHER ENTRY ACCESS ENABLED
+              </span>
+            </div>
+
+            {enabledExams.map((exam, i) => (
+              <div key={exam.id || i} style={{ 
+                marginTop: i > 0 ? 20 : 0, 
+                borderTop: i > 0 ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
+                paddingTop: i > 0 ? 16 : 0
+              }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em' }}>
+                  {exam.exam_name} {exam.year ? exam.year : ''}
+                </h3>
+                <p style={{ margin: '6px 0 16px', fontSize: 12, fontWeight: 600, color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.4 }}>
+                  এই পরীক্ষার রেজাল্ট এন্ট্রি দেওয়ার এক্সেস চালু আছে। রেজাল্ট সাবমিট করতে নিচের বাটনে ক্লিক করুন।
+                </p>
+                <a 
+                  href="https://exam.fmhs.edu.bd" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: 8, 
+                    height: 42, 
+                    padding: '0 24px', 
+                    borderRadius: 14, 
+                    background: '#fff', 
+                    color: '#ea580c', 
+                    fontSize: 13, 
+                    fontWeight: 900, 
+                    textDecoration: 'none', 
+                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.12)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.08)';
+                  }}
+                >
+                  ✍️ রেজাল্ট এন্ট্রি দিন (Enter Results)
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
           {apps.map((app, i) => {
             const isExt = app.to.startsWith('http');
