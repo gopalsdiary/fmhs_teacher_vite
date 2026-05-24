@@ -62,7 +62,58 @@ export default function TeacherGradeEntryPage() {
     return cq + mcq + practical
   }
 
+  async function checkDbAccess(): Promise<boolean> {
+    if (!examId) return false
+    const { data, error } = await supabase
+      .from('FMHS_exams_names')
+      .select('is_live, teacher_entry_enabled')
+      .eq('id', Number(examId))
+      .single()
+
+    if (error || !data) {
+      console.error('Error verifying database access:', error)
+      return false
+    }
+
+    const hasAccess = data.is_live && data.teacher_entry_enabled
+    
+    // Sync local state with database
+    setAssignment(prev => {
+      if (!prev) return null
+      if (prev.exams.is_live !== data.is_live || prev.exams.teacher_entry_enabled !== data.teacher_entry_enabled) {
+        return {
+          ...prev,
+          exams: {
+            ...prev.exams,
+            is_live: data.is_live,
+            teacher_entry_enabled: data.teacher_entry_enabled
+          }
+        }
+      }
+      return prev
+    })
+
+    return hasAccess
+  }
+
   useEffect(() => { loadContext() }, [assignId])
+
+  // Periodic and tab-focus security access checks
+  useEffect(() => {
+    if (!examId) return
+    
+    // Check when teacher returns to the browser tab
+    const handleFocus = () => { checkDbAccess() }
+    window.addEventListener('focus', handleFocus)
+
+    // Poll access status every 20 seconds
+    const interval = setInterval(checkDbAccess, 20000)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      clearInterval(interval)
+    }
+  }, [examId])
 
   async function loadContext() {
     if (!assignId) return
@@ -137,13 +188,13 @@ export default function TeacherGradeEntryPage() {
     const studentRows = rows || []
     
     // RESTORE FROM LOCAL STORAGE
-    const localKey = `unsaved_marks_${assignId}`
+    const localKey = `unsaved_marks_${examId}_${assignId}`
     const localData = localStorage.getItem(localKey)
     if (localData) {
       try {
         const parsed = JSON.parse(localData)
         editRef.current = parsed
-        const base = rule ? `*${rule.subject_name}` : ''
+        const base = correctRule ? `*${correctRule.subject_name}` : ''
         studentRows.forEach((row: any) => {
           if (parsed[row.id]) Object.assign(row, parsed[row.id])
           if (base && parsed[row.id]) {
@@ -180,13 +231,15 @@ export default function TeacherGradeEntryPage() {
     setSavingRows(prev => ({ ...prev, [rowId]: 'pending' }))
     recalcTotal(ri)
 
-    const localKey = `unsaved_marks_${assignId}`
+    const localKey = `unsaved_marks_${examId}_${assignId}`
     localStorage.setItem(localKey, JSON.stringify(editRef.current))
   }
 
   async function saveRow(rowId: number) {
-    if (!assignment?.exams.is_live || !assignment?.exams.teacher_entry_enabled) {
-      alert('❌ এই পরীক্ষাটি বন্ধ বা শিক্ষকগণের এন্ট্রির অনুমতি নেই।')
+    // Fresh database access check
+    const hasAccess = await checkDbAccess()
+    if (!hasAccess) {
+      alert('❌ দুঃখিত, এই পরীক্ষাটি বর্তমানে বন্ধ বা শিক্ষকগণের এন্ট্রির অনুমতি নেই।')
       return
     }
     if (!editRef.current[rowId]) return
@@ -196,7 +249,7 @@ export default function TeacherGradeEntryPage() {
     if (!error) {
       setSavingRows(prev => ({ ...prev, [rowId]: 'success' }))
       delete editRef.current[rowId]
-      const localKey = `unsaved_marks_${assignId}`
+      const localKey = `unsaved_marks_${examId}_${assignId}`
       if (Object.keys(editRef.current).length === 0) localStorage.removeItem(localKey)
       else localStorage.setItem(localKey, JSON.stringify(editRef.current))
 
@@ -214,8 +267,10 @@ export default function TeacherGradeEntryPage() {
   }
 
   async function saveAll() {
-    if (!assignment?.exams.is_live || !assignment?.exams.teacher_entry_enabled) {
-      alert('❌ এই পরীক্ষাটি বন্ধ বা শিক্ষকগণের এন্ট্রির অনুমতি নেই।')
+    // Fresh database access check
+    const hasAccess = await checkDbAccess()
+    if (!hasAccess) {
+      alert('❌ দুঃখিত, এই পরীক্ষাটি বর্তমানে বন্ধ বা শিক্ষকগণের এন্ট্রির অনুমতি নেই।')
       return
     }
     setSaving(true)
@@ -233,7 +288,7 @@ export default function TeacherGradeEntryPage() {
       }
     }
 
-    const localKey = `unsaved_marks_${assignId}`
+    const localKey = `unsaved_marks_${examId}_${assignId}`
     if (Object.keys(editRef.current).length === 0) localStorage.removeItem(localKey)
     else localStorage.setItem(localKey, JSON.stringify(editRef.current))
 
@@ -244,6 +299,14 @@ export default function TeacherGradeEntryPage() {
 
   async function handleFinalSubmit() {
     if (!assignment) return
+    
+    // Fresh database access check
+    const hasAccess = await checkDbAccess()
+    if (!hasAccess) {
+      alert('❌ দুঃখিত, এই পরীক্ষাটি বর্তমানে বন্ধ বা শিক্ষকগণের এন্ট্রির অনুমতি নেই।')
+      return
+    }
+
     const msg = `আপনি কি নিশ্চিত যে আপনি এই বিষয়ের মার্কস ফাইনাল সাবমিট করতে চান?
 ফাইনাল সাবমিটের পর আপনি আর কোনো পরিবর্তন বা নতুন এন্ট্রি করতে পারবেন না।`
     if (!confirm(msg)) return
@@ -260,7 +323,7 @@ export default function TeacherGradeEntryPage() {
           delete editRef.current[rowId]
         }
       }
-      const localKey = `unsaved_marks_${assignId}`
+      const localKey = `unsaved_marks_${examId}_${assignId}`
       if (Object.keys(editRef.current).length === 0) localStorage.removeItem(localKey)
       else localStorage.setItem(localKey, JSON.stringify(editRef.current))
     }
@@ -284,7 +347,7 @@ export default function TeacherGradeEntryPage() {
 
   async function resetLocalMarks() {
     if (!confirm('আপনি কি নিশ্চিত? এটি আপনার করা সব অসংরক্ষিত পরিবর্তন মুছে ফেলবে এবং ডাটাবেস থেকে ফ্রেশ ডাটা লোড করবে।')) return
-    localStorage.removeItem(`unsaved_marks_${assignId}`)
+    localStorage.removeItem(`unsaved_marks_${examId}_${assignId}`)
     editRef.current = {}
     setSavingRows({})
     await loadContext()
@@ -399,7 +462,7 @@ export default function TeacherGradeEntryPage() {
                transition: 'all 0.2s ease'
              }}>
                 {myAssignments.map(a => (
-                   <option key={(a as any).subject_code} value={(a as any).subject_code}>{(a as any).exams?.exam_name} - {(a as any).subject_name} (Class {a.class} {a.section}){(a as any).final_submitted ? ' ✓ Final Submitted' : ''}</option>
+                   <option key={(a as any).subject_code} value={(a as any).subject_code}>{a.class} - {a.section ? a.section.charAt(0).toUpperCase() + a.section.slice(1).toLowerCase() : ''} - {(a as any).subject_name}{(a as any).final_submitted ? ' ✓ Final Submitted' : ''}</option>
                 ))}
              </select>
              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#ec4899', fontWeight: 800, background: '#fdf2f8', padding: '6px 12px', borderRadius: '8px', border: '1px dashed #fbcfe8', display: 'inline-block', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
@@ -428,7 +491,8 @@ export default function TeacherGradeEntryPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            gridColumn: isMobile && isEditable ? 'span 2' : 'auto'
           }}>
              {showDetails ? '🙈 HIDE NAMES' : '👁️ SHOW NAMES'}
           </button>
@@ -468,28 +532,10 @@ export default function TeacherGradeEntryPage() {
           )}
           {isEditable && (
             <>
-              <button className="save-all-btn" onClick={saveAll} disabled={saving} style={{
-                padding: isMobile ? '8px' : '10px 32px',
-                borderRadius: isMobile ? '10px' : '12px',
-                background: '#059669',
-                color: '#fff',
-                border: 'none',
-                fontWeight: 800,
-                cursor: 'pointer',
-                width: isMobile ? '100%' : 'auto',
-                height: isMobile ? '44px' : 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gridColumn: isMobile ? 'span 2' : 'auto',
-                marginTop: isMobile ? '4px' : '0',
-                fontSize: isMobile ? '13px' : '14px',
-                boxSizing: 'border-box'
-              }}>{saving ? 'সংরক্ষণ হচ্ছে...' : 'সব সংরক্ষণ করুন'}</button>
               <button className="final-submit-btn" onClick={handleFinalSubmit} disabled={saving} style={{
                 padding: isMobile ? '8px' : '10px 32px',
                 borderRadius: isMobile ? '10px' : '12px',
-                background: '#4f46e5',
+                background: '#ef4444',
                 color: '#fff',
                 border: 'none',
                 fontWeight: 800,
@@ -499,19 +545,38 @@ export default function TeacherGradeEntryPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gridColumn: isMobile ? 'span 2' : 'auto',
+                gridColumn: isMobile ? 'span 1' : 'auto',
                 marginTop: isMobile ? '4px' : '0',
                 fontSize: isMobile ? '13px' : '14px',
                 boxSizing: 'border-box',
-                boxShadow: '0 4px 10px rgba(79,70,229,0.2)'
+                boxShadow: '0 4px 10px rgba(239,68,68,0.2)'
               }}>🔒 Final Submit</button>
+              <button className="save-all-btn" onClick={saveAll} disabled={saving} style={{
+                padding: isMobile ? '8px' : '10px 32px',
+                borderRadius: isMobile ? '10px' : '12px',
+                background: '#f97316',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 800,
+                cursor: 'pointer',
+                width: isMobile ? '100%' : 'auto',
+                height: isMobile ? '44px' : 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gridColumn: isMobile ? 'span 1' : 'auto',
+                marginTop: isMobile ? '4px' : '0',
+                fontSize: isMobile ? '13px' : '14px',
+                boxSizing: 'border-box',
+                boxShadow: '0 4px 10px rgba(249,115,22,0.2)'
+              }}>{saving ? 'সংরক্ষণ...' : 'সব সংরক্ষণ'}</button>
             </>
           )}
         </div>
       </header>
 
       <main className="main-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 8px' : '32px 20px', transition: 'all 0.3s ease' }}>
-        <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? '10px' : '16px', marginBottom: isMobile ? '20px' : '32px' }}>
+        <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? '6px' : '16px', marginBottom: isMobile ? '20px' : '32px' }}>
           {[
             { label: 'শিক্ষার্থী সংখ্যা', value: data.length, icon: '👥', color: '#4f46e5' },
             { label: 'পাস মার্ক', value: rule.pass_total, icon: '🎯', color: '#059669' },
@@ -520,11 +585,15 @@ export default function TeacherGradeEntryPage() {
           ].map(stat => (
             <div key={stat.label} className="stats-card" style={{ 
               background: '#fff', 
-              padding: isMobile ? '12px 8px' : '24px', 
-              borderRadius: isMobile ? '14px' : '20px', 
+              padding: isMobile ? '8px 4px' : '24px', 
+              borderRadius: isMobile ? '8px' : '20px', 
               border: '1.5px solid #f97316', 
               textAlign: 'center', 
               boxShadow: '0 2px 10px rgba(0,0,0,0.01)', 
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
               transition: 'all 0.25s ease-in-out' 
             }}
             onMouseEnter={e => {
@@ -538,8 +607,8 @@ export default function TeacherGradeEntryPage() {
               e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.01)'
             }}
             >
-               <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase' }}>{stat.label}</div>
-               <div className="stats-card-value" style={{ fontSize: isMobile ? '1.4rem' : '1.8rem', fontWeight: 900, color: stat.color }}>{stat.value}</div>
+               <div style={{ fontSize: isMobile ? '7.5px' : '10px', lineHeight: 1.1, fontWeight: 800, color: '#94a3b8', marginBottom: isMobile ? '4px' : '8px', textTransform: 'uppercase' }}>{stat.label}</div>
+               <div className="stats-card-value" style={{ fontSize: isMobile ? '1.1rem' : '1.8rem', fontWeight: 900, color: stat.color }}>{stat.value}</div>
             </div>
           ))}
         </div>

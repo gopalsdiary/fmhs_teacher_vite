@@ -34,6 +34,18 @@ export default function TeacherExamDashboardPage() {
 
   useEffect(() => {
     loadAssignments()
+
+    // Query database when tab gains focus
+    const handleFocus = () => loadAssignments()
+    window.addEventListener('focus', handleFocus)
+
+    // Poll status updates every 30 seconds
+    const interval = setInterval(loadAssignments, 30000)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      clearInterval(interval)
+    }
   }, [])
 
   async function loadAssignments() {
@@ -120,6 +132,28 @@ export default function TeacherExamDashboardPage() {
     </div>
   )
 
+  // Helper to format section nicely (e.g. GOLAP -> Golap)
+  const formatSection = (sec: string) => {
+    if (!sec) return ''
+    return sec.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')
+  }
+
+  // Group filtered assignments by exam
+  const examGroups = filteredAssignments.reduce((acc, curr) => {
+    const examId = curr.exam_id
+    if (!acc[examId]) {
+      acc[examId] = {
+        examName: curr.exams.exam_name,
+        year: curr.exams.year,
+        isLive: curr.exams.is_live,
+        teacherEntryEnabled: curr.exams.teacher_entry_enabled,
+        assignments: []
+      }
+    }
+    acc[examId].assignments.push(curr)
+    return acc
+  }, {} as Record<number, { examName: string; year: number; isLive: boolean; teacherEntryEnabled: boolean; assignments: Assignment[] }>)
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Outfit', sans-serif" }}>
       
@@ -203,10 +237,10 @@ export default function TeacherExamDashboardPage() {
         }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>
-              Welcome back, {teacherName || 'Instructor'} 👋
+              Welcome, {teacherName || 'Instructor'} 👋
             </h2>
             <p style={{ color: '#c7d2fe', fontSize: '12px', marginTop: '4px', marginBottom: 0, maxWidth: '600px', lineHeight: 1.4 }}>
-              Select a class assignment below to enter, review, and finalize academic grades for the current exam session.
+              Select a class assignment below to enter current exam session.
             </p>
           </div>
           {/* Subtle design element */}
@@ -222,40 +256,6 @@ export default function TeacherExamDashboardPage() {
           }} />
         </div>
 
-        {/* STATS OVERVIEW */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '12px', 
-          marginBottom: '20px' 
-        }}>
-          {/* STAT 1: Total Assignments */}
-          <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', fontSize: '1.1rem' }}>📚</div>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{totalCount}</div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>Total Assignments</div>
-            </div>
-          </div>
-
-          {/* STAT 2: Open for Entry */}
-          <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', fontSize: '1.1rem' }}>✍️</div>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>{openCount}</div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>Open for Mark Entry</div>
-            </div>
-          </div>
-
-          {/* STAT 3: Submitted & Locked */}
-          <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#faf5ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a855f7', fontSize: '1.1rem' }}>🔒</div>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#a855f7', lineHeight: 1 }}>{lockedCount}</div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>Submitted & Locked</div>
-            </div>
-          </div>
-        </div>
 
         {/* SEARCH & FILTERS BAR */}
         <div style={{ 
@@ -369,155 +369,172 @@ export default function TeacherExamDashboardPage() {
           </div>
         </div>
 
-        {/* ASSIGNMENTS GRID */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '16px' 
-        }}>
-          {filteredAssignments.map(a => {
-            const isEditable = a.exams.is_live && a.exams.teacher_entry_enabled && !a.final_submitted
-
-            // Compute status properties for visual markers
-            let statusLabel = 'Locked'
-            let statusBg = '#faf5ff'
-            let statusColor = '#9333ea'
-            let statusIcon = '🔒'
-
-            if (isEditable) {
-              statusLabel = 'Entry Open'
-              statusBg = '#ecfdf5'
-              statusColor = '#059669'
-              statusIcon = '✍️'
-            } else if (!a.exams.is_live || !a.exams.teacher_entry_enabled) {
-              statusLabel = 'Admin Paused'
-              statusBg = '#fff7ed'
-              statusColor = '#ea580c'
-              statusIcon = '🚫'
-            }
-
+        {/* ASSIGNMENTS BY EXAM GROUP */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {Object.entries(examGroups).map(([examId, group]) => {
             return (
-              <Link 
-                key={a.id} 
-                to={`/teacher-entry/${a.exam_id}/${a.subject_code}`} 
-                style={{ textDecoration: 'none', display: 'block', height: '100%' }}
-              >
-                <div style={{ 
-                  background: '#fff', 
-                  border: '1.5px solid #f97316', 
-                  borderRadius: '14px', 
-                  padding: '16px 18px',
-                  height: '100%',
+              <div key={examId} style={{
+                background: '#fff',
+                borderRadius: '16px',
+                border: '1.5px solid #f97316', // FMHS iconic orange border preserved for continuity
+                padding: '20px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                {/* Exam Header */}
+                <div style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'all 0.25s ease-in-out', 
-                  position: 'relative', 
-                  overflow: 'hidden', 
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.01)'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-4px)'
-                  e.currentTarget.style.borderColor = '#ea580c'
-                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(249, 115, 22, 0.08)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.borderColor = '#f97316'
-                  e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.01)'
-                }}
-                >
-                  {/* Top status indicator and Session Badge */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                     <span style={{ 
-                       padding: '3px 8px', 
-                       background: '#f1f5f9', 
-                       color: '#475569', 
-                       borderRadius: '6px', 
-                       fontSize: '10px', 
-                       fontWeight: 800 
-                     }}>
-                       {a.exams.year} Session
-                     </span>
-                     <div style={{ 
-                       display: 'flex', 
-                       alignItems: 'center', 
-                       gap: '4px', 
-                       padding: '3px 8px', 
-                       background: statusBg, 
-                       color: statusColor, 
-                       borderRadius: '6px', 
-                       fontSize: '10px', 
-                       fontWeight: 800 
-                     }}>
-                        <span>{statusIcon}</span>
-                        <span>{statusLabel}</span>
-                     </div>
-                  </div>
-
-                  {/* Subject and Exam Details */}
-                  <div style={{ flexGrow: 1 }}>
-                    <h3 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>
-                      {a.exams.exam_name}
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderBottom: '1px solid #f1f5f9',
+                  paddingBottom: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '18px' }}>📝</span>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                      {group.examName}
                     </h3>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#4f46e5', marginBottom: '12px' }}>
-                      {a.subject_name}
-                    </div>
+                    <span style={{ 
+                      padding: '3px 8px', 
+                      background: '#f1f5f9', 
+                      color: '#475569', 
+                      borderRadius: '6px', 
+                      fontSize: '10px', 
+                      fontWeight: 800 
+                    }}>
+                      {group.year} Session
+                    </span>
                   </div>
-
-                  {/* Class and Section Info cards */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                    <div style={{ flex: 1, background: '#f8fafc', padding: '6px', borderRadius: '8px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: '8px', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.2px' }}>CLASS</div>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#334155', marginTop: '1px' }}>{a.class}</div>
-                    </div>
-                    <div style={{ flex: 1, background: '#f8fafc', padding: '6px', borderRadius: '8px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: '8px', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.2px' }}>SECTION</div>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#334155', marginTop: '1px' }}>{a.section}</div>
-                    </div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px' }}>
+                    {group.assignments.length} {group.assignments.length === 1 ? 'Assignment' : 'Assignments'}
                   </div>
-
-                  {/* Interactive Action Indicator */}
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    paddingTop: '10px', 
-                    borderTop: '1px solid #f1f5f9' 
-                  }}>
-                     <span style={{ 
-                       fontSize: '12px', 
-                       fontWeight: 800, 
-                       color: isEditable ? '#4f46e5' : '#64748b',
-                       display: 'flex',
-                       alignItems: 'center',
-                       gap: '4px'
-                     }}>
-                       {isEditable ? 'Enter Grades →' : 'View Grades →'}
-                     </span>
-                     <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>Code: {a.subject_code}</span>
-                  </div>
-
                 </div>
-              </Link>
+
+                {/* List of Assignment Buttons in One Line */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {group.assignments.map(a => {
+                    const isEditable = a.exams.is_live && a.exams.teacher_entry_enabled && !a.final_submitted
+
+                    // Compute status properties
+                    let statusLabel = 'Locked'
+                    let statusBg = '#faf5ff'
+                    let statusColor = '#9333ea'
+                    let statusIcon = '🔒'
+
+                    if (isEditable) {
+                      statusLabel = 'Entry Open'
+                      statusBg = '#ecfdf5'
+                      statusColor = '#059669'
+                      statusIcon = '✍️'
+                    } else if (!a.exams.is_live || !a.exams.teacher_entry_enabled) {
+                      statusLabel = 'Entry closed'
+                      statusBg = '#fff7ed'
+                      statusColor = '#ea580c'
+                      statusIcon = '🚫'
+                    }
+
+                    return (
+                      <Link 
+                        key={a.id} 
+                        to={`/teacher-entry/${a.exam_id}/${a.subject_code}`} 
+                        style={{ textDecoration: 'none', display: 'block' }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 18px',
+                          background: '#fff',
+                          border: '1.5px solid #f97316',
+                          borderRadius: '12px',
+                          transition: 'all 0.2s ease-in-out',
+                          gap: '12px',
+                          flexWrap: 'wrap'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = '#ea580c'
+                          e.currentTarget.style.background = '#fff7ed'
+                          e.currentTarget.style.transform = 'translateX(6px)'
+                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(249, 115, 22, 0.15)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = '#f97316'
+                          e.currentTarget.style.background = '#fff'
+                          e.currentTarget.style.transform = 'none'
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                        >
+                          {/* Assignment Info: "7 Golap - Bangla 1st paper" format */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 250px', minWidth: 0 }}>
+                            <div style={{ 
+                              width: '28px', 
+                              height: '28px', 
+                              borderRadius: '6px', 
+                              background: '#ffedd5', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              flexShrink: 0
+                            }}>
+                              📚
+                            </div>
+                            <div style={{ 
+                              fontSize: '14px', 
+                              fontWeight: 800, 
+                              color: '#ea580c'
+                            }}>
+                              {a.class} {formatSection(a.section)} - {a.subject_name}
+                            </div>
+                          </div>
+
+                          {/* Interactive Badges & Action */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700 }}>Code: {a.subject_code}</span>
+                            
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              padding: '4px 10px', 
+                              background: statusBg, 
+                              color: statusColor, 
+                              borderRadius: '6px', 
+                              fontSize: '10px', 
+                              fontWeight: 800 
+                            }}>
+                              <span>{statusIcon}</span>
+                              <span>{statusLabel}</span>
+                            </div>
+
+
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
 
           {filteredAssignments.length === 0 && (
             <div style={{ 
-              gridColumn: '1 / -1', 
               textAlign: 'center', 
               padding: '40px 16px', 
               background: '#fff', 
               borderRadius: '14px', 
               border: '2px dashed #cbd5e1' 
             }}>
-               <div style={{ fontSize: '30px', marginBottom: '12px' }}>🔍</div>
-               <h3 style={{ color: '#0f172a', fontWeight: 800, margin: '0 0 6px 0', fontSize: '14px' }}>No matching assignments found</h3>
-               <p style={{ color: '#64748b', margin: 0, fontSize: '12px' }}>
-                 {assignments.length === 0 
-                   ? 'No classes have been assigned to your account yet.' 
-                   : 'Try adjusting your search terms or filter selections.'}
-               </p>
+              <div style={{ fontSize: '30px', marginBottom: '12px' }}>🔍</div>
+              <h3 style={{ color: '#0f172a', fontWeight: 800, margin: '0 0 6px 0', fontSize: '14px' }}>No matching assignments found</h3>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '12px' }}>
+                {assignments.length === 0 
+                  ? 'No classes have been assigned to your account yet.' 
+                  : 'Try adjusting your search terms or filter selections.'}
+              </p>
             </div>
           )}
         </div>
