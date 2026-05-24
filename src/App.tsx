@@ -14,6 +14,8 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Messaging     = lazy(() => import('./pages/Messaging'));
 const StudentChat   = lazy(() => import('./pages/StudentChat'));
 const MyInfo        = lazy(() => import('./pages/MyInfo'));
+const TeacherExamDashboardPage = lazy(() => import('./pages/TeacherExamDashboardPage'));
+const TeacherGradeEntryPage    = lazy(() => import('./pages/TeacherGradeEntryPage'));
 import PWAInstall from './components/PWAInstall';
 import UpdateNotifier from './components/UpdateNotifier';
 
@@ -100,6 +102,8 @@ const App: React.FC = () => {
           <Route path="/messages"       element={<Messaging />} />
           <Route path="/student-chat"   element={<StudentChat />} />
           <Route path="/my-info"        element={<MyInfo />} />
+          <Route path="/teacher-exam-dashboard" element={<TeacherExamDashboardPage />} />
+          <Route path="/teacher-entry/:examId/:assignId" element={<TeacherGradeEntryPage />} />
           <Route path="/"               element={<Navigate to="/login" replace />} />
           <Route path="*"               element={<Navigate to="/login" replace />} />
         </Routes>

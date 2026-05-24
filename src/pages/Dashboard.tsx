@@ -222,10 +222,8 @@ const Dashboard: React.FC = () => {
                 <p style={{ margin: '6px 0 16px', fontSize: 12, fontWeight: 600, color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.4 }}>
                   এই পরীক্ষার রেজাল্ট এন্ট্রি দেওয়ার এক্সেস চালু আছে। রেজাল্ট সাবমিট করতে নিচের বাটনে ক্লিক করুন।
                 </p>
-                <a 
-                  href="https://exam.fmhs.edu.bd" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                <Link 
+                  to="/teacher-exam-dashboard" 
                   style={{ 
                     display: 'inline-flex', 
                     alignItems: 'center', 
@@ -253,7 +251,7 @@ const Dashboard: React.FC = () => {
                   }}
                 >
                   ✍️ রেজাল্ট এন্ট্রি দিন (Enter Results)
-                </a>
+                </Link>
               </div>
             ))}
           </div>
