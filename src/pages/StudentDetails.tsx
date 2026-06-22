@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { initSupabase, checkAuth } from '../auth-check';
 import { cacheGet, cacheSet } from '../cache';
+import { getOrFetchPhoto } from '../photoCache';
 
 const C = {
   purple: '#6366f1',
@@ -27,6 +28,17 @@ const StudentDetails: React.FC = () => {
   const [columnSpec, setColumnSpec] = useState<ColumnSpec[]>([]);
   const [error, setError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [photoSrc, setPhotoSrc] = useState<string | null>(null);
+
+  // IndexedDB থেকে photo load
+  useEffect(() => {
+    if (!student?.iid) return;
+    let cancelled = false;
+    getOrFetchPhoto(student.iid, student.student_photo_url).then(url => {
+      if (!cancelled) setPhotoSrc(url);
+    });
+    return () => { cancelled = true; };
+  }, [student?.iid, student?.student_photo_url]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,14 +108,21 @@ const StudentDetails: React.FC = () => {
         {/* Profile Card Horizontal */}
         <div style={{ background: '#fff', borderRadius: 20, padding: '16px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
           <div style={{ position: 'relative' }}>
-            {student.student_photo_url ? (
-              <img 
-                src={student.student_photo_url} 
-                alt="p" 
+            {photoSrc ? (
+              <img
+                src={photoSrc}
+                alt="p"
                 onClick={() => setShowPreview(true)}
-                style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover', border: '2px solid #fff', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: 'pointer' }} 
+                style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover', border: '2px solid #fff', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: 'pointer' }}
               />
-            ) : <div style={{ width: 64, height: 64, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>👤</div>}
+            ) : student.student_photo_url ? (
+              // URL আছে কিন্তু এখনো load হচ্ছে
+              <div style={{ width: 64, height: 64, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 24, height: 24, border: '2px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            ) : (
+              <div style={{ width: 64, height: 64, borderRadius: 16, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>👤</div>
+            )}
             <div style={{ position: 'absolute', bottom: -5, right: -5, background: C.purple, color: '#fff', fontSize: 9, fontWeight: 900, padding: '2px 6px', borderRadius: 6, border: '2px solid #fff' }}>#{student.active_roll}</div>
           </div>
           <div style={{ minWidth: 0 }}>
@@ -137,15 +156,15 @@ const StudentDetails: React.FC = () => {
       </main>
 
       {/* Photo Preview Modal */}
-      {showPreview && student.student_photo_url && (
-        <div 
+      {showPreview && photoSrc && (
+        <div
           onClick={() => setShowPreview(false)}
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease' }}
         >
-          <img 
-            src={student.student_photo_url} 
-            alt="Full Profile" 
-            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: 16, boxShadow: '0 25px 60px rgba(0,0,0,0.5)', border: '4px solid #fff' }} 
+          <img
+            src={photoSrc}
+            alt="Full Profile"
+            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: 16, boxShadow: '0 25px 60px rgba(0,0,0,0.5)', border: '4px solid #fff' }}
           />
           <button style={{ position: 'absolute', top: 20, right: 20, width: 44, height: 44, borderRadius: '50%', border: 'none', background: '#fff', color: '#000', fontSize: 24, fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>×</button>
         </div>

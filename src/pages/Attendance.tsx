@@ -73,7 +73,8 @@ const Attendance: React.FC = () => {
         const asgn = teacher.allAssignments || [{ access_class: teacher.access_class, access_section: teacher.access_section }];
         let all: any[] = [];
         for (const a of asgn) {
-          const { data } = await supabase.from('student_database').select('*')
+          const { data } = await supabase.from('student_database')
+            .select('iid, student_name_en, active_roll, active_class, active_section, rfid_card_no, father_name_en, father_mobile, mother_name_en, mother_mobile, guardian_mobile')
             .eq('active_class', a.access_class).eq('active_section', a.access_section)
             .order('active_roll', { ascending: true });
           if (data) all = [...all, ...data];
@@ -144,7 +145,7 @@ const Attendance: React.FC = () => {
 
       supabase.from('attendence_entry').select('attendence_date, rfid_card_no, attendence_status')
         .in('rfid_card_no', allIdentities)
-        .order('attendence_date', { ascending: false }).limit(5000)
+        .order('attendence_date', { ascending: false }).limit(200)
         .then(({ data, error }: any) => {
           if (error) notify('error', 'Failed to fetch logs.');
           const group: Record<string, { presentSet: Set<string> }> = {};

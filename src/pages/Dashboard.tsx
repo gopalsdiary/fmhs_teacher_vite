@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
     return C.purple;
   };
 
-  const { syncAllData, syncing, progress } = useDataSync();
+  const { syncAllData, syncing, progress, photoProgress } = useDataSync();
 
   useEffect(() => {
     fetch('/dashboard_link.csv')
@@ -104,8 +104,8 @@ const Dashboard: React.FC = () => {
         const lastSync = localStorage.getItem('last_full_sync');
         const syncAge = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
         
-        // Sync if older than 1 hour or never synced
-        if (syncAge > 3600000) {
+        // Sync if older than 5 days or never synced
+        if (syncAge > 432000000) {
           syncAllData();
         }
       }
@@ -164,15 +164,30 @@ const Dashboard: React.FC = () => {
                 <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, margin: '2px 0 0' }}>Class: {teacher?.access_class} • Sec: {teacher?.access_section}</p>
              </div>
           </div>
-          {syncing && (
+          {(syncing || photoProgress) && (
             <div style={{ marginTop: 15, background: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: '10px 15px', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>SYNCING STUDENT DATA...</span>
-                <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>{progress}%</span>
-              </div>
-              <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
-                <div style={{ width: `${progress}%`, height: '100%', background: '#fff', transition: 'width 0.3s' }} />
-              </div>
+              {syncing && !photoProgress && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>SYNCING STUDENT DATA...</span>
+                    <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>{progress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ width: `${progress}%`, height: '100%', background: '#fff', transition: 'width 0.3s' }} />
+                  </div>
+                </>
+              )}
+              {photoProgress && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>📸 SAVING PHOTOS TO DEVICE... ({photoProgress.done}/{photoProgress.total})</span>
+                    <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>{Math.round((photoProgress.done / photoProgress.total) * 100)}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.round((photoProgress.done / photoProgress.total) * 100)}%`, height: '100%', background: '#10b981', transition: 'width 0.3s' }} />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

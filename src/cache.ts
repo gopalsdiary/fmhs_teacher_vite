@@ -1,7 +1,7 @@
 import { get, set, del, keys, clear } from 'idb-keyval';
 
 /* Advanced persistent cache using IndexedDB */
-const DEFAULT_TTL = 7 * 24 * 60 * 60 * 1000; // 1 week
+const DEFAULT_TTL = 5 * 24 * 60 * 60 * 1000; // 5 দিন (photo sync cycle-এর সাথে sync)
 
 export async function cacheSet<T>(key: string, data: T, customTTL?: number) {
   const expiry = Date.now() + (customTTL || DEFAULT_TTL);
@@ -23,9 +23,12 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
     const payload: any = await get(`cache:${key}`);
     if (!payload) return null;
     
-    // If expired but offline, return stale data
-    if (Date.now() > payload.expiry && navigator.onLine) {
-      // await del(`cache:${key}`); // Don't delete, just return null so it refetches
+    // Expired + online হলে null ফিরিয়ে দাও (fresh data fetch হবে)
+    if (Date.now() > payload.expiry) {
+      if (navigator.onLine) {
+        return null; // force refetch
+      }
+      // Offline হলে stale data দাও
       return payload.data as T;
     }
     return payload.data as T;

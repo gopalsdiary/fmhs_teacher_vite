@@ -122,9 +122,10 @@ const Messaging: React.FC = () => {
   const fetchRecentChats = async (myEmail: string, teachers: any[]) => {
     const { data: msgs } = await msgSupabase
       .from('fmhs_teacher_messages')
-      .select('*')
+      .select('sender_email, recipient_email, message, created_at, is_read')
       .or(`sender_email.eq.${myEmail},recipient_email.eq.${myEmail}`)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50); // সাম্প্রতিক ৫০টি মেসেজই যথেষ্ট
 
     if (!msgs) return;
 
@@ -163,7 +164,8 @@ const Messaging: React.FC = () => {
         .from('fmhs_teacher_messages')
         .select('*')
         .or(`and(sender_email.eq.${currentUser.teacher_email},recipient_email.eq.${selectedRecipient.email}),and(sender_email.eq.${selectedRecipient.email},recipient_email.eq.${currentUser.teacher_email})`)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(100); // সাম্প্রতিক ১০০টি মেসেজ
       setMessages(data || []);
       markAsRead();
     };
