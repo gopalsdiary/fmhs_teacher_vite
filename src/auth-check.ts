@@ -46,7 +46,7 @@ export const checkAuth = async () => {
   authPromise = (async () => {
     const supabase = initSupabase();
     const emailFromStorage = localStorage.getItem('teacherEmail');
-    const email = emailFromStorage ? emailFromStorage.toLowerCase() : null;
+    const email = emailFromStorage ? emailFromStorage.trim().toLowerCase() : null;
 
     if (!email) {
       authPromise = null;
@@ -55,23 +55,27 @@ export const checkAuth = async () => {
 
     try {
       const { data, error } = await supabase
-        .from('admin_teacher')
+        .from('teacher_database')
         .select('*')
-        .eq('teacher_email', email)
-        .single();
+        .ilike('teacher_email_id', email)
+        .maybeSingle();
 
       if (error || !data) {
         localStorage.removeItem('teacherEmail');
+        localStorage.removeItem('teacherProfile');
         authPromise = null;
         return null;
       }
 
-      // Add assignments logic if needed or just return raw data
-      // (assuming data already has access_class, access_section, and allAssignments JSON)
-      cachedTeacher = data;
-      localStorage.setItem('teacherProfile', JSON.stringify(data));
+      const normalizedData = {
+        ...data,
+        teacher_email: data.teacher_email_id || data.teacher_email || email
+      };
+
+      cachedTeacher = normalizedData;
+      localStorage.setItem('teacherProfile', JSON.stringify(normalizedData));
       authPromise = null;
-      return data;
+      return normalizedData;
     } catch (e) {
       console.error('Auth check failed:', e);
       authPromise = null;
@@ -82,15 +86,23 @@ export const checkAuth = async () => {
   return authPromise;
 };
 
-export const setSession = (email: string) => {
-  localStorage.setItem('teacherEmail', email.toLowerCase());
-  cachedTeacher = null;
+export const setSession = (email: string, teacherProfile?: any) => {
+  const cleanEmail = email.trim().toLowerCase();
+  localStorage.setItem('teacherEmail', cleanEmail);
+  if (teacherProfile) {
+    const normalized = {
+      ...teacherProfile,
+      teacher_email: teacherProfile.teacher_email_id || teacherProfile.teacher_email || cleanEmail
+    };
+    cachedTeacher = normalized;
+    localStorage.setItem('teacherProfile', JSON.stringify(normalized));
+  } else {
+    cachedTeacher = null;
+  }
   authPromise = null;
 };
 
 export const logout = async () => {
-  const supabase = initSupabase();
-  await supabase.auth.signOut();
   localStorage.removeItem('teacherEmail');
   localStorage.removeItem('teacherProfile');
   cachedTeacher = null;

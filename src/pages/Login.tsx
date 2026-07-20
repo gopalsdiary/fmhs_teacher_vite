@@ -23,29 +23,71 @@ const Login: React.FC = () => {
   useEffect(() => {
     const saved = localStorage.getItem('rememberedEmail');
     if (saved) setEmail(saved);
-    supabase.auth.getSession().then(({ data: { session } }: any) => { 
-      if (session && localStorage.getItem('teacherEmail')) navigate('/dashboard'); 
-    });
-  }, []);
+    const storedEmail = localStorage.getItem('teacherEmail');
+    if (storedEmail) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return setMsg({ type: 'error', text: 'All fields required' });
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setMsg({ type: 'error', text: 'Invalid Info' }); setLoading(false); }
-    else { 
-      // Use helper to set session and clear stale promises
-      const { setSession } = await import('../auth-check');
-      setSession(email);
-      
-      // Trigger background sync but don't await it to avoid blocking UI
-      // We can't use hooks inside the click handler directly, 
-      // but we can import the logic or just let the next page (Dashboard) handle it.
-      // Better to trigger it in Dashboard or a global provider.
-      navigate('/dashboard'); 
+    setMsg({ type: '', text: '' });
+
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      return setMsg({ type: 'error', text: 'ইমেইল ও পাসওয়ার্ড উভয়ই প্রদান করুন' });
     }
 
+    setLoading(true);
+    try {
+      // Query teacher_database table by teacher_email_id
+      const { data: teacher, error } = await supabase
+        .from('teacher_database')
+        .select('*')
+        .ilike('teacher_email_id', cleanEmail)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Teacher login error:', error);
+        setMsg({ type: 'error', text: 'লগইন করতে ব্যর্থ হয়েছে' });
+        setLoading(false);
+        return;
+      }
+
+      if (!teacher) {
+        setMsg({ type: 'error', text: 'ইমেইল বা পাসওয়ার্ড সঠিক নয়' });
+        setLoading(false);
+        return;
+      }
+
+      // login_password empty check (if database login_password is empty or null)
+      const dbPassword = teacher.login_password ? String(teacher.login_password).trim() : '';
+      if (!dbPassword) {
+        setMsg({ type: 'error', text: 'এই অ্যাকাউন্টের পাসওয়ার্ড সেট করা নেই। অফিসে যোগাযোগ করুন।' });
+        setLoading(false);
+        return;
+      }
+
+      // Password comparison
+      if (dbPassword !== cleanPassword) {
+        setMsg({ type: 'error', text: 'ইমেইল বা পাসওয়ার্ড সঠিক নয়' });
+        setLoading(false);
+        return;
+      }
+
+      // Successful login
+      localStorage.setItem('rememberedEmail', cleanEmail);
+      const { setSession } = await import('../auth-check');
+      setSession(teacher.teacher_email_id || cleanEmail, teacher);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      setMsg({ type: 'error', text: 'লগইন করতে ব্যর্থ হয়েছে' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

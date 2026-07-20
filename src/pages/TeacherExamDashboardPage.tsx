@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { initSupabase, logout as authLogout } from '../auth-check'
+import { initSupabase, checkAuth, logout as authLogout } from '../auth-check'
 
 interface Assignment {
   id: number
@@ -49,14 +49,15 @@ export default function TeacherExamDashboardPage() {
   }, [])
 
   async function loadAssignments() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { navigate('/login'); return }
-    setUserEmail(user.email ?? '')
+    const teacher = await checkAuth()
+    if (!teacher) { navigate('/login'); return }
+    const email = teacher.teacher_email_id || teacher.teacher_email || ''
+    setUserEmail(email)
 
     const { data: teacherSelections, error: selectionError } = await supabase
       .from('FMHS_exam_teacher_selection')
       .select('*')
-      .eq('teacher_email_id', user.email)
+      .eq('teacher_email_id', email)
       .not('exam_id', 'is', null)
     
     if (selectionError) {
@@ -438,7 +439,7 @@ export default function TeacherExamDashboardPage() {
                     return (
                       <Link 
                         key={a.id} 
-                        to={`/teacher-entry/${a.exam_id}/${a.subject_code}`} 
+                        to={`/teacher-entry/${a.exam_id}/${a.id}`} 
                         style={{ textDecoration: 'none', display: 'block' }}
                       >
                         <div style={{

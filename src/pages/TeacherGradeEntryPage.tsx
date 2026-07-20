@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { initSupabase } from '../auth-check'
+import { initSupabase, checkAuth } from '../auth-check'
 
 interface Assignment {
   id: number
@@ -130,14 +130,15 @@ export default function TeacherGradeEntryPage() {
     editRef.current = {}
     setSavingRows({})
     
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { navigate('/login'); return }
+    const teacher = await checkAuth()
+    if (!teacher) { navigate('/login'); return }
+    const email = teacher.teacher_email_id || teacher.teacher_email || ''
 
     // Load ALL assignments for switcher
     const { data: teacherSelections, error: selectionError } = await supabase
       .from('FMHS_exam_teacher_selection')
       .select('*')
-      .eq('teacher_email_id', user.email)
+      .eq('teacher_email_id', email)
       .not('exam_id', 'is', null)
     
     if (selectionError || !teacherSelections || teacherSelections.length === 0) {
@@ -171,10 +172,9 @@ export default function TeacherGradeEntryPage() {
 
     setMyAssignments(mappedAssigns as any[])
 
-    // Find the single current active assignment from mapped list
-    const assign = mappedAssigns.find(
-      (a: any) => String(a.subject_code) === String(assignId) && Number(a.exam_id) === Number(examId)
-    )
+    // Find the single current active assignment from mapped list (check ID first for uniqueness)
+    const assign = mappedAssigns.find((a: any) => String(a.id) === String(assignId)) 
+      || mappedAssigns.find((a: any) => String(a.subject_code) === String(assignId) && Number(a.exam_id) === Number(examId))
 
     if (!assign) { setStatus('Assignment not found'); setLoading(false); return }
     setAssignment(assign as any)
@@ -186,7 +186,7 @@ export default function TeacherGradeEntryPage() {
     // Find the rule that is specifically assigned to this class
     const correctRule = rList?.find((r: any) => 
       (r.exam_class as any[])?.some(c => Number(c.class) === Number(assign.class) && c.selected)
-    )
+    ) || rList?.[0]
     if (correctRule) setRule(correctRule)
 
     const { data: rows } = await supabase
@@ -459,7 +459,7 @@ export default function TeacherGradeEntryPage() {
             minWidth: 0,
             width: isMobile ? '100%' : 'auto'
           }}>
-             <select className="premium-select" value={assignId} onChange={(e) => navigate(`/teacher-entry/${examId}/${e.target.value}`)} style={{
+             <select className="premium-select" value={assignment?.id || assignId} onChange={(e) => navigate(`/teacher-entry/${examId}/${e.target.value}`)} style={{
                border: '1.5px solid #e2e8f0',
                background: '#f8fafc',
                fontSize: isMobile ? '0.95rem' : '1.1rem',
@@ -476,7 +476,7 @@ export default function TeacherGradeEntryPage() {
                transition: 'all 0.2s ease'
              }}>
                 {myAssignments.map(a => (
-                   <option key={a.id} value={(a as any).subject_code}>{a.class} - {a.section ? a.section.charAt(0).toUpperCase() + a.section.slice(1).toLowerCase() : ''} - {(a as any).subject_name}{(a as any).final_submitted ? ' ✓ Final Submitted' : ''}</option>
+                   <option key={a.id} value={a.id}>Class {a.class} - {a.section ? a.section.charAt(0).toUpperCase() + a.section.slice(1).toLowerCase() : ''} - {(a as any).subject_name}{(a as any).final_submitted ? ' ✓ Final Submitted' : ''}</option>
                 ))}
              </select>
              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#ec4899', fontWeight: 800, background: '#fdf2f8', padding: '6px 12px', borderRadius: '8px', border: '1px dashed #fbcfe8', display: 'inline-block', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>

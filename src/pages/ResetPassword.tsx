@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { initSupabase } from '../auth-check';
+import { initSupabase, checkAuth } from '../auth-check';
 
 const C = {
   purple: '#6366f1',
@@ -23,21 +23,45 @@ const ResetPassword: React.FC = () => {
   const supabase = initSupabase();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-      if (!session) { setIsSessionValid(false); setMessage({ type: 'error', text: 'Invalid link' }); }
+    checkAuth().then(user => {
+      if (!user) {
+        setIsSessionValid(false);
+        setMessage({ type: 'error', text: 'লগইন সেশন নেই' });
+      }
     });
-  }, [supabase.auth]);
+  }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword !== confirmPassword) { notify('error', 'Check passwords'); return; }
+    const cleanPass = newPassword.trim();
+    if (!cleanPass || cleanPass !== confirmPassword.trim()) {
+      notify('error', 'পাসওয়ার্ড নিশ্চিত করুন');
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const user = await checkAuth();
+      const email = user?.teacher_email_id || user?.teacher_email;
+      if (!email) {
+        notify('error', 'সেশন পাওয়া যায়নি');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('teacher_database')
+        .update({ login_password: cleanPass })
+        .ilike('teacher_email_id', email);
+
       if (error) notify('error', error.message);
-      else { notify('success', '✓ Updated!'); setTimeout(() => navigate('/login'), 1500); }
-    } catch { notify('error', 'Error'); }
-    finally { setLoading(false); }
+      else {
+        notify('success', '✓ পাসওয়ার্ড পরিবর্তিত হয়েছে!');
+        setTimeout(() => navigate('/login'), 1500);
+      }
+    } catch {
+      notify('error', 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const notify = (type: string, text: string) => setMessage({ type, text });
