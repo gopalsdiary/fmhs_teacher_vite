@@ -63,21 +63,46 @@ const StudentList: React.FC = () => {
     );
   }, [students, searchTerm]);
 
+  useEffect(() => {
+    checkAuth().then(setTeacher);
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, paddingBottom: 40 }}>
       {/* Search Header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #e2e8f0', padding: '10px 16px' }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate('/dashboard')} style={{ width: 34, height: 34, borderRadius: 10, border: 'none', background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>←</button>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>🔍</span>
-            <input 
-              type="text" placeholder="Roll, ID or Name..."
-              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-              style={{ width: '100%', padding: '9px 12px 9px 38px', borderRadius: 12, border: '1px solid #cbd5e1', outline: 'none', fontSize: 14, fontWeight: 600, background: '#fff' }}
-            />
+        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={() => navigate('/dashboard')} style={{ width: 34, height: 34, borderRadius: 10, border: 'none', background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>←</button>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>🔍</span>
+              <input 
+                type="text" placeholder="Roll, ID or Name..."
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px 9px 38px', borderRadius: 12, border: '1px solid #cbd5e1', outline: 'none', fontSize: 14, fontWeight: 600, background: '#fff' }}
+              />
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: C.purple, background: '#f5f3ff', padding: '4px 10px', borderRadius: 10 }}>{filtered.length}</div>
           </div>
-          <div style={{ fontSize: 11, fontWeight: 900, color: C.purple, background: '#f5f3ff', padding: '4px 10px', borderRadius: 10 }}>{filtered.length}</div>
+          {teacher?.allAssignments && teacher.allAssignments.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f1f5f9', padding: '6px 12px', borderRadius: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.muted }}>শ্রেণী নির্বাচন করুন:</span>
+              <select 
+                value={`${filterClass || teacher.access_class}:${filterSection || teacher.access_section}`} 
+                onChange={(e) => {
+                  const [cls, sec] = e.target.value.split(':');
+                  navigate(`?class=${cls}&section=${sec}`);
+                }}
+                style={{ border: 'none', background: 'transparent', fontSize: 12, fontWeight: 800, color: C.purple, outline: 'none', cursor: 'pointer' }}
+              >
+                {teacher.allAssignments.map((a: any, idx: number) => (
+                  <option key={idx} value={`${a.access_class}:${a.access_section}`}>
+                    Class: {a.access_class} • Section: {a.access_section}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

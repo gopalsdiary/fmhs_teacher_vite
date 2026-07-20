@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { initSupabase, checkAuth } from '../auth-check';
 import { cacheGet, cacheSet } from '../cache';
 
@@ -25,36 +25,67 @@ const fmtMobile = (num: any): string => {
 };
 
 const CallGuardian: React.FC = () => {
+  const [params] = useSearchParams();
   const navigate = useNavigate();
   const supabase = initSupabase();
+
+  const filterClass   = params.get('class')   || params.get('active_class');
+  const filterSection = params.get('section') || params.get('active_section');
+
   const [teacher, setTeacher] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
 
-  useEffect(() => {
-    checkAuth().then(async tData => {
-      if (!tData) { navigate('/login'); return; }
-      setTeacher(tData);
-      const cacheKey = `guardian:${tData.access_class}:${tData.access_section}`;
-      const cached = await cacheGet<any[]>(cacheKey);
-      if (cached) { setStudents(cached); setLoading(false); return; }
+  const assignments = teacher?.allAssignments || [{ access_class: teacher?.access_class, access_section: teacher?.access_section }];
+  let activeClass = filterClass;
+  let activeSection = filterSection;
+  const isAllowed = assignments.some((a: any) => String(a.access_class) === String(activeClass) && String(a.access_section) === String(activeSection));
+  if (!isAllowed && assignments[0]) {
+    activeClass = assignments[0].access_class;
+    activeSection = assignments[0].access_section;
+  }
 
-      const assignments = tData.allAssignments || [{ access_class: tData.access_class, access_section: tData.access_section }];
-      let all: any[] = [];
-      for (const a of assignments) {
-        const { data } = await supabase.from('student_database')
-          .select('iid, active_roll, student_name_en, father_name_en, father_mobile, active_class, active_section')
-          .eq('active_class', a.access_class).eq('active_section', a.access_section)
-          .order('active_roll', { ascending: true });
-        if (data) all = [...all, ...data];
-      }
-      const unique = all.filter((s, i, self) => i === self.findIndex(t => t.iid === s.iid));
-      cacheSet(cacheKey, unique);
-      setStudents(unique);
-      setLoading(false);
+  useEffect(() => {
+    checkAuth().then(tData => {
+      if (!tData) { navigate('/login'); }
+      else { setTeacher(tData); }
     });
   }, [navigate]);
+
+  useEffect(() => {
+    if (!teacher || !activeClass || !activeSection) return;
+    let isCurrent = true;
+    setLoading(true);
+
+    const loadData = async () => {
+      const cacheKey = `guardian:${activeClass}:${activeSection}`;
+      const cached = await cacheGet<any[]>(cacheKey);
+      if (cached && isCurrent) {
+        setStudents(cached);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data } = await supabase.from('student_database')
+          .select('iid, active_roll, student_name_en, father_name_en, father_mobile, active_class, active_section')
+          .eq('active_class', activeClass).eq('active_section', activeSection)
+          .order('active_roll', { ascending: true });
+        
+        const raw = data || [];
+        if (isCurrent) {
+          cacheSet(cacheKey, raw);
+          setStudents(raw);
+        }
+      } finally {
+        if (isCurrent) setLoading(false);
+      }
+    };
+
+    loadData();
+    return () => { isCurrent = false; };
+  }, [teacher, activeClass, activeSection, supabase]);
 
   const filtered = useMemo(() => {
     if (!search) return students;
@@ -84,14 +115,36 @@ const CallGuardian: React.FC = () => {
 
           <div style={{ background: `linear-gradient(135deg, ${C.orange}, #f97316)`, borderRadius: 24, padding: '16px 20px', color: '#fff' }}>
              <div style={{ display: 'flex', gap: 15, marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                   <span style={{ fontSize: 16 }}>🏫</span>
-                   <span style={{ fontSize: 13, fontWeight: 900 }}>শ্রেণি: {teacher?.access_class || '–'}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                   <span style={{ fontSize: 16 }}>👥</span>
-                   <span style={{ fontSize: 13, fontWeight: 900 }}>শাখা: {teacher?.access_section || '–'}</span>
-                </div>
+                {teacher?.allAssignments && teacher.allAssignments.length > 1 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🏫</span>
+                    <select 
+                      value={`${activeClass}:${activeSection}`} 
+                      onChange={(e) => {
+                        const [cls, sec] = e.target.value.split(':');
+                        navigate(`?class=${cls}&section=${sec}`);
+                      }}
+                      style={{ border: 'none', background: 'transparent', fontSize: 13, fontWeight: 900, color: '#fff', outline: 'none', cursor: 'pointer' }}
+                    >
+                      {teacher.allAssignments.map((a: any, idx: number) => (
+                        <option key={idx} value={`${a.access_class}:${a.access_section}`} style={{ color: '#000' }}>
+                          শ্রেণি: {a.access_class} • শাখা: {a.access_section}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                       <span style={{ fontSize: 16 }}>🏫</span>
+                       <span style={{ fontSize: 13, fontWeight: 900 }}>শ্রেণি: {activeClass || '–'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                       <span style={{ fontSize: 16 }}>👥</span>
+                       <span style={{ fontSize: 13, fontWeight: 900 }}>শাখা: {activeSection || '–'}</span>
+                    </div>
+                  </>
+                )}
              </div>
              <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.9 }}>
                 <span style={{ fontSize: 16 }}>👤</span>

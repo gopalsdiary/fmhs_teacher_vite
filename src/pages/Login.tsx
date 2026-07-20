@@ -42,12 +42,21 @@ const Login: React.FC = () => {
 
     setLoading(true);
     try {
-      // Query teacher_database table by teacher_email_id
-      const { data: teacher, error } = await supabase
+      // Query teacher_database table by teacher_email_id or iid
+      let { data: teacher, error } = await supabase
         .from('teacher_database')
         .select('*')
         .ilike('teacher_email_id', cleanEmail)
         .maybeSingle();
+
+      if (!teacher && !isNaN(Number(cleanEmail))) {
+        const { data: teacherByIid } = await supabase
+          .from('teacher_database')
+          .select('*')
+          .eq('iid', Number(cleanEmail))
+          .maybeSingle();
+        teacher = teacherByIid;
+      }
 
       if (error) {
         console.error('Teacher login error:', error);

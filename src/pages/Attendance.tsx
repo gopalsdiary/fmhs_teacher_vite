@@ -38,6 +38,9 @@ const Attendance: React.FC = () => {
   const navigate   = useNavigate();
   const supabase   = initSupabase();
 
+  const filterClass   = params.get('class')   || params.get('active_class');
+  const filterSection = params.get('section') || params.get('active_section');
+
   const [tab, setTab]             = useState(params.get('view') || 'today');
   const [teacher, setTeacher]     = useState<any>(null);
   const [students, setStudents]   = useState<any[]>([]);
@@ -58,35 +61,40 @@ const Attendance: React.FC = () => {
   const [myAttData, setMyAttData] = useState<any[]>([]);
   const [myAttLoad, setMyAttLoad] = useState(false);
 
+  const assignments = teacher?.allAssignments || [{ access_class: teacher?.access_class, access_section: teacher?.access_section }];
+  let activeClass = filterClass;
+  let activeSection = filterSection;
+  const isAllowed = assignments.some((a: any) => String(a.access_class) === String(activeClass) && String(a.access_section) === String(activeSection));
+  if (!isAllowed && assignments[0]) {
+    activeClass = assignments[0].access_class;
+    activeSection = assignments[0].access_section;
+  }
+
   const notify = (type: 'success' | 'error', text: string) => {
     setToast({ type, text } as any);
     setTimeout(() => setToast({ type: '', text: '' } as any), 3000);
   };
 
   const loadData = useCallback(async (d: string) => {
-    if (!teacher) return;
+    if (!teacher || !activeClass || !activeSection) return;
     setLoading(true);
     try {
-      const studKey = `att-students:${teacher.access_class}:${teacher.access_section}`;
+      const studKey = `att-students:${activeClass}:${activeSection}`;
       let unique = await cacheGet<any[]>(studKey);
       if (!unique) {
-        const asgn = teacher.allAssignments || [{ access_class: teacher.access_class, access_section: teacher.access_section }];
-        let all: any[] = [];
-        for (const a of asgn) {
-          const { data } = await supabase.from('student_database')
-            .select('iid, student_name_en, active_roll, active_class, active_section, rfid_card_no, father_name_en, father_mobile, mother_name_en, mother_mobile, guardian_mobile')
-            .eq('active_class', a.access_class).eq('active_section', a.access_section)
-            .order('active_roll', { ascending: true });
-          if (data) all = [...all, ...data];
-        }
-        unique = all.filter((s, i, self) => i === self.findIndex(t => t.iid === s.iid));
+        const { data } = await supabase.from('student_database')
+          .select('iid, student_name_en, active_roll, active_class, active_section, rfid_card_no, father_name_en, father_mobile, mother_name_en, mother_mobile, guardian_mobile')
+          .eq('active_class', activeClass).eq('active_section', activeSection)
+          .order('active_roll', { ascending: true });
+        unique = data || [];
         await cacheSet(studKey, unique);
       }
 
-      setStudents(unique);
+      const finalUnique = unique || [];
+      setStudents(finalUnique);
 
-      const rfidCards = unique.map(s => s.rfid_card_no ? String(s.rfid_card_no).trim() : '').filter(Boolean);
-      const manualIds = unique.map(s => `MANUAL-${s.iid}`);
+      const rfidCards = finalUnique.map(s => s.rfid_card_no ? String(s.rfid_card_no).trim() : '').filter(Boolean);
+      const manualIds = finalUnique.map(s => `MANUAL-${s.iid}`);
       const allIdentities = [...rfidCards, ...manualIds];
       
       let rfidMap: Record<string, any> = {};
@@ -109,7 +117,7 @@ const Attendance: React.FC = () => {
       setRfid(rfidMap);
       setIidMap(iidMap);
       const init: Record<string, 'present' | 'absent'> = {};
-      unique.forEach(s => { 
+      finalUnique.forEach(s => { 
         const card = s.rfid_card_no ? String(s.rfid_card_no).trim() : '';
         const sid = String(s.iid);
         // A student is present if they have an iid record OR they have a non-generic RFID record
@@ -118,7 +126,7 @@ const Attendance: React.FC = () => {
       });
       setAtt(init);
     } finally { setLoading(false); }
-  }, [teacher, supabase]);
+  }, [teacher, activeClass, activeSection, supabase]);
 
   useEffect(() => { checkAuth().then(d => { if (!d) navigate('/login'); else setTeacher(d); }); }, [navigate]);
   useEffect(() => { if (teacher && tab === 'today') loadData(date); }, [teacher, date, loadData, tab]);
@@ -279,7 +287,24 @@ const Attendance: React.FC = () => {
           <button onClick={() => navigate('/dashboard')} style={{ width: 34, height: 34, borderRadius: 10, border: 'none', background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Attendance</h1>
-            <p style={{ fontSize: 10, fontWeight: 700, color: C.muted }}>Cls {teacher?.access_class || '–'} • Sec {teacher?.access_section || '–'}</p>
+            {teacher?.allAssignments && teacher.allAssignments.length > 1 ? (
+              <select 
+                value={`${activeClass}:${activeSection}`} 
+                onChange={(e) => {
+                  const [cls, sec] = e.target.value.split(':');
+                  navigate(`?class=${cls}&section=${sec}`);
+                }}
+                style={{ border: 'none', background: 'transparent', fontSize: 10, fontWeight: 900, color: C.purple, outline: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                {teacher.allAssignments.map((a: any, idx: number) => (
+                  <option key={idx} value={`${a.access_class}:${a.access_section}`}>
+                    Class: {a.access_class} • Sec: {a.access_section}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p style={{ fontSize: 10, fontWeight: 700, color: C.muted }}>Cls {activeClass || '–'} • Sec {activeSection || '–'}</p>
+            )}
           </div>
           <div style={{ background: '#fff', borderRadius: 10, padding: '4px 10px', display: 'flex', gap: 8, border: '1px solid #f1f5f9' }}>
             <span style={{ fontSize: 11, fontWeight: 900, color: C.green }}>{statVals.present}</span>

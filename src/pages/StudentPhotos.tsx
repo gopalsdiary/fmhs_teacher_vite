@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { initSupabase, checkAuth } from '../auth-check';
 import { cacheGet, cacheSet } from '../cache';
 import { getOrFetchPhoto } from '../photoCache';
@@ -136,49 +136,70 @@ const PhotoCard: React.FC<{
 };
 
 const StudentPhotos: React.FC = () => {
+  const [params] = useSearchParams();
   const navigate = useNavigate();
   const supabase = initSupabase();
+
+  const filterClass   = params.get('class')   || params.get('active_class');
+  const filterSection = params.get('section') || params.get('active_section');
+
+  const [teacher, setTeacher] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAuth().then(async (tData) => {
-      if (!tData) { navigate('/login'); return; }
-      const cacheKey = `photos:${tData.access_class}:${tData.access_section}`;
+  const assignments = teacher?.allAssignments || [{ access_class: teacher?.access_class, access_section: teacher?.access_section }];
+  let activeClass = filterClass;
+  let activeSection = filterSection;
+  const isAllowed = assignments.some((a: any) => String(a.access_class) === String(activeClass) && String(a.access_section) === String(activeSection));
+  if (!isAllowed && assignments[0]) {
+    activeClass = assignments[0].access_class;
+    activeSection = assignments[0].access_section;
+  }
 
-      // ১. Cache থেকে instant load
+  useEffect(() => {
+    checkAuth().then(tData => {
+      if (!tData) { navigate('/login'); }
+      else { setTeacher(tData); }
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!teacher || !activeClass || !activeSection) return;
+    let isCurrent = true;
+    setLoading(true);
+
+    const loadPhotos = async () => {
+      const cacheKey = `photos:${activeClass}:${activeSection}`;
       const cached = await cacheGet<any[]>(cacheKey);
-      if (cached) {
+      if (cached && isCurrent) {
         setStudents(cached);
         setLoading(false);
         return;
       }
 
-      // ২. Online হলে Supabase থেকে fetch
       try {
-        const assignments = tData.allAssignments || [
-          { access_class: tData.access_class, access_section: tData.access_section },
-        ];
-        let all: any[] = [];
-        for (const entry of assignments) {
-          const { data } = await supabase
-            .from('student_database')
-            .select('iid, student_name_en, active_roll, student_photo_url, active_class, active_section, session')
-            .eq('active_class', entry.access_class)
-            .eq('active_section', entry.access_section)
-            .order('active_roll', { ascending: true });
-          if (data) all = [...all, ...data];
+        const { data } = await supabase
+          .from('student_database')
+          .select('iid, student_name_en, active_roll, student_photo_url, active_class, active_section, session')
+          .eq('active_class', activeClass)
+          .eq('active_section', activeSection)
+          .order('active_roll', { ascending: true });
+        
+        const raw = data || [];
+        if (isCurrent) {
+          cacheSet(cacheKey, raw);
+          setStudents(raw);
         }
-        const unique = all.filter((s, idx, self) => idx === self.findIndex((t) => t.iid === s.iid));
-        cacheSet(cacheKey, unique);
-        setStudents(unique);
       } finally {
-        setLoading(false);
+        if (isCurrent) setLoading(false);
       }
-    });
-  }, [navigate]);
+    };
+
+    loadPhotos();
+    return () => { isCurrent = false; };
+  }, [teacher, activeClass, activeSection, supabase]);
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -205,34 +226,55 @@ const StudentPhotos: React.FC = () => {
         background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid #e2e8f0', padding: '10px 16px',
       }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={() => navigate('/dashboard')}
-            style={{
-              width: 34, height: 34, borderRadius: 10, border: 'none',
-              background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            ←
-          </button>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
-              🔍
-            </span>
-            <input
-              type="text"
-              placeholder="Gallery Search..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => navigate('/dashboard')}
               style={{
-                width: '100%', padding: '9px 12px 9px 38px',
-                borderRadius: 12, border: '1px solid #cbd5e1',
-                outline: 'none', fontSize: 13, fontWeight: 600,
-                boxSizing: 'border-box',
+                width: 34, height: 34, borderRadius: 10, border: 'none',
+                background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-            />
+            >
+              ←
+            </button>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }}>
+                🔍
+              </span>
+              <input
+                type="text"
+                placeholder="Gallery Search..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%', padding: '9px 12px 9px 38px',
+                  borderRadius: 12, border: '1px solid #cbd5e1',
+                  outline: 'none', fontSize: 13, fontWeight: 600,
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
           </div>
+          {teacher?.allAssignments && teacher.allAssignments.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f1f5f9', padding: '6px 12px', borderRadius: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.muted }}>শ্রেণী নির্বাচন করুন:</span>
+              <select 
+                value={`${activeClass}:${activeSection}`} 
+                onChange={(e) => {
+                  const [cls, sec] = e.target.value.split(':');
+                  navigate(`?class=${cls}&section=${sec}`);
+                }}
+                style={{ border: 'none', background: 'transparent', fontSize: 12, fontWeight: 800, color: C.orange, outline: 'none', cursor: 'pointer' }}
+              >
+                {teacher.allAssignments.map((a: any, idx: number) => (
+                  <option key={idx} value={`${a.access_class}:${a.access_section}`}>
+                    Class: {a.access_class} • Section: {a.access_section}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </header>
 

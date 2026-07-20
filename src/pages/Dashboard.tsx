@@ -160,8 +160,20 @@ const Dashboard: React.FC = () => {
           <div style={{ marginTop: 18, padding: '12px 16px', background: 'rgba(255,255,255,0.15)', borderRadius: 16, backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 15 }}>
              <div style={{ width: 44, height: 44, borderRadius: 14, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>👨‍🏫</div>
              <div>
-                <p style={{ color: '#fff', fontSize: 14, fontWeight: 900, margin: 0 }}>{teacher?.teacher_email?.split('@')[0].toUpperCase()}</p>
-                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, margin: '2px 0 0' }}>Class: {teacher?.access_class} • Sec: {teacher?.access_section}</p>
+                <p style={{ color: '#fff', fontSize: 14, fontWeight: 900, margin: 0 }}>{teacher?.teacher_name_en || teacher?.teacher_name || teacher?.teacher_email?.split('@')[0].toUpperCase()}</p>
+                 <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 700, marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                   {teacher?.allAssignments && Array.isArray(teacher.allAssignments) ? (
+                     teacher.allAssignments.map((a: any, idx: number) => (
+                       <span key={idx} style={{ background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: 8, fontSize: '10px', color: '#fff', fontWeight: 800 }}>
+                         Class: {a.access_class} • Sec: {a.access_section}
+                       </span>
+                     ))
+                   ) : (
+                     <span style={{ background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: 8, fontSize: '10px', color: '#fff', fontWeight: 800 }}>
+                       Class: {teacher?.access_class || '—'} • Sec: {teacher?.access_section || '—'}
+                     </span>
+                   )}
+                 </p>
              </div>
           </div>
           {(syncing || photoProgress) && (
