@@ -55,7 +55,16 @@ export default function TeacherGradeEntryPage() {
   function calculateSubjectTotal(row: StudentRow, edits: Record<string, any>) {
     if (!rule) return 0
     const base = `*${rule.subject_name}`
+    const totalCq = Number(rule.total_cq) || 0
+    const totalMcq = Number(rule.total_mcq) || 0
+    const totalPractical = Number(rule.total_practical) || 0
+
     const getVal = (key: string) => Object.prototype.hasOwnProperty.call(edits, key) ? edits[key] : row[key]
+
+    if (totalCq === 0 && totalMcq === 0 && totalPractical === 0) {
+      return Number(getVal(`${base}_Total`)) || 0
+    }
+
     const cq = Number(getVal(`${base}_CQ`)) || 0
     const mcq = Number(getVal(`${base}_MCQ`)) || 0
     const practical = Number(getVal(`${base}_Practical`)) || 0
@@ -368,11 +377,16 @@ export default function TeacherGradeEntryPage() {
 
   const isEditable = assignment.exams.is_live && assignment.exams.teacher_entry_enabled && !assignment.final_submitted
   const base = `*${rule.subject_name}`
+  const totalCq = Number(rule.total_cq) || 0
+  const totalMcq = Number(rule.total_mcq) || 0
+  const totalPractical = Number(rule.total_practical) || 0
+  const isDirectTotalEntry = totalCq === 0 && totalMcq === 0 && totalPractical === 0
+
   const comps = [
-    { label: 'CQ', key: `${base}_CQ`, pass: rule.pass_cq, editable: rule.total_cq > 0 },
-    { label: 'MCQ', key: `${base}_MCQ`, pass: rule.pass_mcq, editable: rule.total_mcq > 0 },
-    { label: 'Practical', key: `${base}_Practical`, pass: rule.pass_practical, editable: rule.total_practical > 0 },
-    { label: 'Total', key: `${base}_Total`, pass: rule.pass_total, editable: false }
+    { label: 'CQ', key: `${base}_CQ`, pass: rule.pass_cq, editable: totalCq > 0 },
+    { label: 'MCQ', key: `${base}_MCQ`, pass: rule.pass_mcq, editable: totalMcq > 0 },
+    { label: 'Practical', key: `${base}_Practical`, pass: rule.pass_practical, editable: totalPractical > 0 },
+    { label: 'Total', key: `${base}_Total`, pass: rule.pass_total, editable: isDirectTotalEntry }
   ].filter(c => c.editable || c.label === 'Total')
 
   return (
@@ -462,7 +476,7 @@ export default function TeacherGradeEntryPage() {
                transition: 'all 0.2s ease'
              }}>
                 {myAssignments.map(a => (
-                   <option key={(a as any).subject_code} value={(a as any).subject_code}>{a.class} - {a.section ? a.section.charAt(0).toUpperCase() + a.section.slice(1).toLowerCase() : ''} - {(a as any).subject_name}{(a as any).final_submitted ? ' ✓ Final Submitted' : ''}</option>
+                   <option key={a.id} value={(a as any).subject_code}>{a.class} - {a.section ? a.section.charAt(0).toUpperCase() + a.section.slice(1).toLowerCase() : ''} - {(a as any).subject_name}{(a as any).final_submitted ? ' ✓ Final Submitted' : ''}</option>
                 ))}
              </select>
              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#ec4899', fontWeight: 800, background: '#fdf2f8', padding: '6px 12px', borderRadius: '8px', border: '1px dashed #fbcfe8', display: 'inline-block', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>

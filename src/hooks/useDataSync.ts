@@ -73,13 +73,12 @@ export function useDataSync() {
         if (!data) continue;
 
         // ২. Cache-এ সেভ করো
-        await cacheSet(studentListKey, data);
-        await cacheSet(attKey, data);
-
         const unique = data.filter(
           (s: any, idx: number, self: any[]) =>
             idx === self.findIndex((t: any) => t.iid === s.iid)
         );
+        await cacheSet(studentListKey, unique);
+        await cacheSet(attKey, unique);
         await cacheSet(photosKey, unique);
 
         for (const student of data) {

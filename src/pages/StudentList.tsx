@@ -44,7 +44,8 @@ const StudentList: React.FC = () => {
         .eq('active_class', finalClass).eq('active_section', finalSection)
         .order('active_roll', { ascending: true });
       
-      return data || [];
+      const raw = data || [];
+      return raw.filter((s: any, i: number, self: any[]) => i === self.findIndex((t: any) => t.iid === s.iid));
     },
     enabled: true
   });
