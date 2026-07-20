@@ -389,6 +389,19 @@ export default function TeacherGradeEntryPage() {
     { label: 'Total', key: `${base}_Total`, pass: rule.pass_total, editable: isDirectTotalEntry }
   ].filter(c => c.editable || c.label === 'Total')
 
+  const fullMarksNum = Number(rule.full_marks) || 0
+  const hasAnyRowInvalid = data.some(row => {
+    const tot = Number(row[`${base}_Total`]) || 0
+    const isTotOver = fullMarksNum > 0 && tot > fullMarksNum
+    const cqVal = Number(row[`${base}_CQ`]) || 0
+    const isCqOver = totalCq > 0 && cqVal > totalCq
+    const mcqVal = Number(row[`${base}_MCQ`]) || 0
+    const isMcqOver = totalMcq > 0 && mcqVal > totalMcq
+    const pracVal = Number(row[`${base}_Practical`]) || 0
+    const isPracOver = totalPractical > 0 && pracVal > totalPractical
+    return isTotOver || isCqOver || isMcqOver || isPracOver
+  })
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Outfit', sans-serif" }}>
       <header className="responsive-header" style={{
@@ -546,14 +559,14 @@ export default function TeacherGradeEntryPage() {
           )}
           {isEditable && (
             <>
-              <button className="final-submit-btn" onClick={handleFinalSubmit} disabled={saving} style={{
+              <button className="final-submit-btn" onClick={handleFinalSubmit} disabled={saving || hasAnyRowInvalid} title={hasAnyRowInvalid ? 'পূর্ণ মান অতিক্রম করা নম্বর সংশোধন করুন' : ''} style={{
                 padding: isMobile ? '8px' : '10px 32px',
                 borderRadius: isMobile ? '10px' : '12px',
-                background: '#ef4444',
-                color: '#fff',
+                background: hasAnyRowInvalid ? '#cbd5e1' : '#ef4444',
+                color: hasAnyRowInvalid ? '#94a3b8' : '#fff',
                 border: 'none',
                 fontWeight: 800,
-                cursor: 'pointer',
+                cursor: hasAnyRowInvalid ? 'not-allowed' : 'pointer',
                 width: isMobile ? '100%' : 'auto',
                 height: isMobile ? '44px' : 'auto',
                 display: 'flex',
@@ -563,16 +576,16 @@ export default function TeacherGradeEntryPage() {
                 marginTop: isMobile ? '4px' : '0',
                 fontSize: isMobile ? '13px' : '14px',
                 boxSizing: 'border-box',
-                boxShadow: '0 4px 10px rgba(239,68,68,0.2)'
+                boxShadow: hasAnyRowInvalid ? 'none' : '0 4px 10px rgba(239,68,68,0.2)'
               }}>🔒 Final Submit</button>
-              <button className="save-all-btn" onClick={saveAll} disabled={saving} style={{
+              <button className="save-all-btn" onClick={saveAll} disabled={saving || hasAnyRowInvalid} title={hasAnyRowInvalid ? 'পূর্ণ মান অতিক্রম করা নম্বর সংশোধন করুন' : ''} style={{
                 padding: isMobile ? '8px' : '10px 32px',
                 borderRadius: isMobile ? '10px' : '12px',
-                background: '#f97316',
-                color: '#fff',
+                background: hasAnyRowInvalid ? '#cbd5e1' : '#f97316',
+                color: hasAnyRowInvalid ? '#94a3b8' : '#fff',
                 border: 'none',
                 fontWeight: 800,
-                cursor: 'pointer',
+                cursor: hasAnyRowInvalid ? 'not-allowed' : 'pointer',
                 width: isMobile ? '100%' : 'auto',
                 height: isMobile ? '44px' : 'auto',
                 display: 'flex',
@@ -582,7 +595,7 @@ export default function TeacherGradeEntryPage() {
                 marginTop: isMobile ? '4px' : '0',
                 fontSize: isMobile ? '13px' : '14px',
                 boxSizing: 'border-box',
-                boxShadow: '0 4px 10px rgba(249,115,22,0.2)'
+                boxShadow: hasAnyRowInvalid ? 'none' : '0 4px 10px rgba(249,115,22,0.2)'
               }}>{saving ? 'সংরক্ষণ...' : 'সব সংরক্ষণ'}</button>
             </>
           )}
@@ -651,38 +664,101 @@ export default function TeacherGradeEntryPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.map((row, ri) => (
-                  <tr key={String(row.id)} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: '#1e293b' }}>{String(row.roll ?? '-')}</td>
-                    {showDetails && (
-                      <>
-                        <td style={{ padding: isMobile ? '8px 4px' : '16px', fontWeight: 700, color: '#0f172a', maxWidth: isMobile ? '110px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.student_name_en ?? '-')}</td>
-                        <td style={{ padding: isMobile ? '8px 4px' : '16px', fontSize: '10px', color: '#64748b', maxWidth: isMobile ? '50px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.iid ?? '-')}</td>
-                      </>
-                    )}
-                    {comps.map(c => {
-                      const val = row[c.key]
-                      const numVal = Number(val) || 0
-                      const isFail = c.pass > 0 && numVal > 0 && numVal < c.pass
-                      if (!c.editable) {
-                        return <td key={c.key} style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: isFail ? '#ef4444' : (numVal > 0 ? '#059669' : '#cbd5e1'), fontSize: isMobile ? '14px' : '1.1rem' }}>{numVal > 0 ? numVal : '-'}</td>
-                      }
-                      return (
-                        <td key={c.key} style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
-                          <input type="number" disabled={!isEditable} value={val !== null && val !== undefined ? String(val) : ''} onChange={e => {
-                            handleEdit(Number(row.id), c.key, e.target.value, ri)
-                            const newData = [...data]; newData[ri][c.key] = e.target.value === '' ? null : Number(e.target.value); setData(newData)
-                          }} style={{ width: isMobile ? '48px' : '80px', padding: isMobile ? '5px 3px' : '10px', textAlign: 'center', borderRadius: isMobile ? '6px' : '12px', border: `2px solid ${isFail ? '#fecaca' : '#e2e8f0'}`, background: isFail ? '#fef2f2' : '#f8fafc', color: isFail ? '#ef4444' : '#0f172a', fontWeight: 800, fontSize: isMobile ? '13px' : '15px', outline: 'none' }} />
-                        </td>
-                      )
-                    })}
-                    <td className="action-cell" style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
-                      <button onClick={() => saveRow(Number(row.id))} disabled={savingRows[String(row.id)] === 'saving'} style={{ padding: isMobile ? '6px 6px' : '8px 16px', borderRadius: isMobile ? '6px' : '10px', border: 'none', fontWeight: 800, fontSize: isMobile ? '9px' : '11px', cursor: 'pointer', background: savingRows[String(row.id)] === 'pending' ? '#f59e0b' : savingRows[String(row.id)] === 'success' ? '#10b981' : savingRows[String(row.id)] === 'saving' ? '#94a3b8' : '#f1f5f9', color: (savingRows[String(row.id)] === 'pending' || savingRows[String(row.id)] === 'success' || savingRows[String(row.id)] === 'saving') ? '#fff' : '#64748b' }}>
-                        {savingRows[String(row.id)] === 'saving' ? '...' : savingRows[String(row.id)] === 'success' ? (isMobile ? 'SAVED' : 'SAVED ✅') : 'SAVE'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {data.map((row, ri) => {
+                  const totVal = Number(row[`${base}_Total`]) || 0
+                  const isTotOver = fullMarksNum > 0 && totVal > fullMarksNum
+                  const cqVal = Number(row[`${base}_CQ`]) || 0
+                  const isCqOver = totalCq > 0 && cqVal > totalCq
+                  const mcqVal = Number(row[`${base}_MCQ`]) || 0
+                  const isMcqOver = totalMcq > 0 && mcqVal > totalMcq
+                  const pracVal = Number(row[`${base}_Practical`]) || 0
+                  const isPracOver = totalPractical > 0 && pracVal > totalPractical
+                  const isRowInvalid = isTotOver || isCqOver || isMcqOver || isPracOver
+
+                  return (
+                    <tr key={String(row.id)} style={{ borderBottom: '1px solid #f1f5f9', background: isRowInvalid ? '#fff5f5' : 'transparent' }}>
+                      <td style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: '#1e293b' }}>{String(row.roll ?? '-')}</td>
+                      {showDetails && (
+                        <>
+                          <td style={{ padding: isMobile ? '8px 4px' : '16px', fontWeight: 700, color: '#0f172a', maxWidth: isMobile ? '110px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.student_name_en ?? '-')}</td>
+                          <td style={{ padding: isMobile ? '8px 4px' : '16px', fontSize: '10px', color: '#64748b', maxWidth: isMobile ? '50px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.iid ?? '-')}</td>
+                        </>
+                      )}
+                      {comps.map(c => {
+                        const val = row[c.key]
+                        const numVal = Number(val) || 0
+                        const isFail = c.pass > 0 && numVal > 0 && numVal < c.pass
+                        const compMax = c.label === 'CQ' ? totalCq : c.label === 'MCQ' ? totalMcq : c.label === 'Practical' ? totalPractical : fullMarksNum
+                        const isExceeded = compMax > 0 && numVal > compMax
+
+                        if (!c.editable) {
+                          return (
+                            <td key={c.key} style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: (isTotOver || isFail) ? '#ef4444' : (numVal > 0 ? '#059669' : '#cbd5e1'), fontSize: isMobile ? '14px' : '1.1rem' }}>
+                              {numVal > 0 ? numVal : '-'}
+                              {isTotOver && <span style={{ fontSize: '10px', marginLeft: '4px', color: '#ef4444' }} title="পূর্ণ মান থেকে বেশি">⚠️</span>}
+                            </td>
+                          )
+                        }
+                        return (
+                          <td key={c.key} style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
+                            <input 
+                              type="number" 
+                              disabled={!isEditable} 
+                              value={val !== null && val !== undefined ? String(val) : ''} 
+                              onChange={e => {
+                                handleEdit(Number(row.id), c.key, e.target.value, ri)
+                                const newData = [...data]; newData[ri][c.key] = e.target.value === '' ? null : Number(e.target.value); setData(newData)
+                              }} 
+                              style={{ 
+                                width: isMobile ? '48px' : '80px', 
+                                padding: isMobile ? '5px 3px' : '10px', 
+                                textAlign: 'center', 
+                                borderRadius: isMobile ? '6px' : '12px', 
+                                border: `2px solid ${isExceeded ? '#ef4444' : (isFail ? '#fecaca' : '#e2e8f0')}`, 
+                                background: isExceeded ? '#fef2f2' : (isFail ? '#fef2f2' : '#f8fafc'), 
+                                color: isExceeded ? '#ef4444' : (isFail ? '#ef4444' : '#0f172a'), 
+                                fontWeight: 800, 
+                                fontSize: isMobile ? '13px' : '15px', 
+                                outline: 'none' 
+                              }} 
+                            />
+                          </td>
+                        )
+                      })}
+                      <td className="action-cell" style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
+                        <button 
+                          onClick={() => saveRow(Number(row.id))} 
+                          disabled={savingRows[String(row.id)] === 'saving' || isRowInvalid} 
+                          title={isRowInvalid ? 'পূর্ণ মান থেকে বেশি নম্বর হওয়ায় ডিসএবেল্ড' : ''}
+                          style={{ 
+                            padding: isMobile ? '6px 6px' : '8px 16px', 
+                            borderRadius: isMobile ? '6px' : '10px', 
+                            border: 'none', 
+                            fontWeight: 800, 
+                            fontSize: isMobile ? '9px' : '11px', 
+                            cursor: isRowInvalid ? 'not-allowed' : 'pointer', 
+                            background: isRowInvalid 
+                              ? '#cbd5e1' 
+                              : savingRows[String(row.id)] === 'pending' 
+                                ? '#f59e0b' 
+                                : savingRows[String(row.id)] === 'success' 
+                                  ? '#10b981' 
+                                  : savingRows[String(row.id)] === 'saving' 
+                                    ? '#94a3b8' 
+                                    : '#f1f5f9', 
+                            color: isRowInvalid 
+                              ? '#94a3b8' 
+                              : (savingRows[String(row.id)] === 'pending' || savingRows[String(row.id)] === 'success' || savingRows[String(row.id)] === 'saving') 
+                                ? '#fff' 
+                                : '#64748b' 
+                          }}
+                        >
+                          {savingRows[String(row.id)] === 'saving' ? '...' : savingRows[String(row.id)] === 'success' ? (isMobile ? 'SAVED' : 'SAVED ✅') : 'SAVE'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
