@@ -87,7 +87,7 @@ export default function TeacherExamDashboardPage() {
         .in('id', examIds),
       supabase
         .from('FMHS_exam_subjects')
-        .select('exam_id, subject_code, subject_name, exam_class')
+        .select('exam_id, subject_code, subject_name')
         .in('exam_id', examIds)
     ])
 
@@ -97,25 +97,29 @@ export default function TeacherExamDashboardPage() {
       return
     }
 
-    // Map exam details & dynamically resolve latest subject_code from FMHS_exam_subjects
+    // Build lookup set for active (exam_id + subject_code)
+    const activeSubjectKeys = new Set(
+      (examSubjects || []).map((es: any) => `${es.exam_id}_${es.subject_code}`)
+    )
+
+    // Map exam details onto each assignment and filter for live exams & valid subject codes
     const mapped = teacherSelections.map((s: any) => {
       const exam = (exams || []).find((e: any) => Number(e.id) === Number(s.exam_id))
-      
-      // Find matching subject in FMHS_exam_subjects by exam_id and subject_name
-      const matchedSubject = (examSubjects || []).find((es: any) => 
-        Number(es.exam_id) === Number(s.exam_id) && 
-        es.subject_name.trim().toLowerCase() === s.subject_name.trim().toLowerCase()
-      )
-
       return {
         ...s,
-        // Override with latest subject_code from FMHS_exam_subjects if available
-        subject_code: matchedSubject?.subject_code || s.subject_code,
         exams: exam || { exam_name: 'Unknown Exam', year: 0, is_live: false, teacher_entry_enabled: false }
       }
-    }).filter((a: any) => a.exams.is_live)
+    }).filter((a: any) => {
+      if (!a.exams.is_live) return false
+      // Filter out obsolete subject codes if examSubjects has active subjects for this exam
+      if (activeSubjectKeys.size > 0) {
+        const key = `${a.exam_id}_${a.subject_code}`
+        return activeSubjectKeys.has(key)
+      }
+      return true
+    })
 
-    // Deduplicate by (exam_id, class, section, subject_name) - keeping newest assignment entry
+    // Deduplicate by (exam_id, class, section, subject_name) - keeping highest ID (newest entry)
     const dedupedMap = new Map<string, any>()
     for (const item of mapped) {
       const uniqueKey = `${item.exam_id}_${item.class}_${item.section}_${item.subject_name}`.toLowerCase()
