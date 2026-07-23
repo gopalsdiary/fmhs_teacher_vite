@@ -444,11 +444,11 @@ export default function TeacherExamDashboardPage() {
 
                 {/* Structured Columns Table View */}
                 <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #fed7aa' }}>
-                  <div style={{ minWidth: '600px' }}>
+                  <div style={{ minWidth: '650px' }}>
                     {/* Header Row */}
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.2fr 2fr 1fr 1.2fr',
+                      gridTemplateColumns: '45px 1.2fr 2fr 1fr 1.2fr',
                       gap: '12px',
                       padding: '10px 16px',
                       background: '#fff7ed',
@@ -459,6 +459,7 @@ export default function TeacherExamDashboardPage() {
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
+                      <div style={{ textAlign: 'center' }}>SL.</div>
                       <div>🏫 Class (ক্লাস)</div>
                       <div>📚 Subject (বিষয়)</div>
                       <div>🔢 Subject Code (বিষয় কোড)</div>
@@ -467,7 +468,7 @@ export default function TeacherExamDashboardPage() {
 
                     {/* Rows */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0', background: '#fff' }}>
-                      {group.assignments.map(a => {
+                      {group.assignments.map((a, index) => {
                         const isEditable = a.exams.is_live && a.exams.teacher_entry_enabled && !a.final_submitted
 
                         // Compute status properties
@@ -496,7 +497,7 @@ export default function TeacherExamDashboardPage() {
                           >
                             <div style={{
                               display: 'grid',
-                              gridTemplateColumns: '1.2fr 2fr 1fr 1.2fr',
+                              gridTemplateColumns: '45px 1.2fr 2fr 1fr 1.2fr',
                               alignItems: 'center',
                               padding: '12px 14px',
                               background: '#fff',
@@ -518,6 +519,16 @@ export default function TeacherExamDashboardPage() {
                               e.currentTarget.style.boxShadow = 'none'
                             }}
                             >
+                              {/* Column 0: Serial Number */}
+                              <div style={{ 
+                                fontSize: '13px', 
+                                fontWeight: 800, 
+                                color: '#9a3412',
+                                textAlign: 'center'
+                              }}>
+                                {index + 1}.
+                              </div>
+
                               {/* Column 1: Class */}
                               <div style={{ 
                                 fontSize: '13px', 
