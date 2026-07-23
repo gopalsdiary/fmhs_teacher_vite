@@ -77,12 +77,19 @@ export default function TeacherExamDashboardPage() {
       setTeacherName(teacherSelections[0].teacher_name_en)
     }
 
-    // Fetch details of all unique exams referenced by assignments
+    // Fetch details of all unique exams and valid exam subjects referenced by assignments
     const examIds = [...new Set(teacherSelections.map((s: any) => Number(s.exam_id)))]
-    const { data: exams, error: examsError } = await supabase
-      .from('FMHS_exams_names')
-      .select('id, exam_name, year, is_live, teacher_entry_enabled')
-      .in('id', examIds)
+    
+    const [{ data: exams, error: examsError }, { data: examSubjects }] = await Promise.all([
+      supabase
+        .from('FMHS_exams_names')
+        .select('id, exam_name, year, is_live, teacher_entry_enabled')
+        .in('id', examIds),
+      supabase
+        .from('FMHS_exam_subjects')
+        .select('exam_id, subject_code, subject_name, exam_class')
+        .in('exam_id', examIds)
+    ])
 
     if (examsError) {
       console.error('Error loading exam metadata:', examsError)
@@ -90,16 +97,34 @@ export default function TeacherExamDashboardPage() {
       return
     }
 
-    // Map exam details onto each assignment in-memory and filter for live exams only
+    // Map exam details & dynamically resolve latest subject_code from FMHS_exam_subjects
     const mapped = teacherSelections.map((s: any) => {
       const exam = (exams || []).find((e: any) => Number(e.id) === Number(s.exam_id))
+      
+      // Find matching subject in FMHS_exam_subjects by exam_id and subject_name
+      const matchedSubject = (examSubjects || []).find((es: any) => 
+        Number(es.exam_id) === Number(s.exam_id) && 
+        es.subject_name.trim().toLowerCase() === s.subject_name.trim().toLowerCase()
+      )
+
       return {
         ...s,
+        // Override with latest subject_code from FMHS_exam_subjects if available
+        subject_code: matchedSubject?.subject_code || s.subject_code,
         exams: exam || { exam_name: 'Unknown Exam', year: 0, is_live: false, teacher_entry_enabled: false }
       }
     }).filter((a: any) => a.exams.is_live)
 
-    setAssignments(mapped as any[])
+    // Deduplicate by (exam_id, class, section, subject_name) - keeping newest assignment entry
+    const dedupedMap = new Map<string, any>()
+    for (const item of mapped) {
+      const uniqueKey = `${item.exam_id}_${item.class}_${item.section}_${item.subject_name}`.toLowerCase()
+      if (!dedupedMap.has(uniqueKey) || Number(item.id) > Number(dedupedMap.get(uniqueKey).id)) {
+        dedupedMap.set(uniqueKey, item)
+      }
+    }
+
+    setAssignments(Array.from(dedupedMap.values()))
     setLoading(false)
   }
 
@@ -413,109 +438,136 @@ export default function TeacherExamDashboardPage() {
                   </div>
                 </div>
 
-                {/* List of Assignment Buttons in One Line */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {group.assignments.map(a => {
-                    const isEditable = a.exams.is_live && a.exams.teacher_entry_enabled && !a.final_submitted
+                {/* Structured Columns Table View */}
+                <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                  <div style={{ minWidth: '600px' }}>
+                    {/* Header Row */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.2fr 2fr 1fr 1.2fr',
+                      gap: '12px',
+                      padding: '10px 16px',
+                      background: '#fff7ed',
+                      borderBottom: '1.5px solid #ffedd5',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      color: '#9a3412',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      <div>🏫 Class (ক্লাস)</div>
+                      <div>📚 Subject (বিষয়)</div>
+                      <div>🔢 Subject Code (বিষয় কোড)</div>
+                      <div style={{ textAlign: 'center' }}>⚡ Entry</div>
+                    </div>
 
-                    // Compute status properties
-                    let statusLabel = 'Locked'
-                    let statusBg = '#faf5ff'
-                    let statusColor = '#9333ea'
-                    let statusIcon = '🔒'
+                    {/* Rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0', background: '#fff' }}>
+                      {group.assignments.map(a => {
+                        const isEditable = a.exams.is_live && a.exams.teacher_entry_enabled && !a.final_submitted
 
-                    if (isEditable) {
-                      statusLabel = 'Entry Open'
-                      statusBg = '#ecfdf5'
-                      statusColor = '#059669'
-                      statusIcon = '✍️'
-                    } else if (!a.exams.is_live || !a.exams.teacher_entry_enabled) {
-                      statusLabel = 'Entry closed'
-                      statusBg = '#fff7ed'
-                      statusColor = '#ea580c'
-                      statusIcon = '🚫'
-                    }
+                        // Compute status properties
+                        let statusLabel = 'Locked'
+                        let statusBg = '#faf5ff'
+                        let statusColor = '#9333ea'
+                        let statusIcon = '🔒'
 
-                    return (
-                      <Link 
-                        key={a.id} 
-                        to={`/teacher-entry/${a.exam_id}/${a.id}`} 
-                        style={{ textDecoration: 'none', display: 'block' }}
-                      >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '12px 18px',
-                          background: '#fff',
-                          border: '1.5px solid #f97316',
-                          borderRadius: '12px',
-                          transition: 'all 0.2s ease-in-out',
-                          gap: '12px',
-                          flexWrap: 'wrap'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.borderColor = '#ea580c'
-                          e.currentTarget.style.background = '#fff7ed'
-                          e.currentTarget.style.transform = 'translateX(6px)'
-                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(249, 115, 22, 0.15)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.borderColor = '#f97316'
-                          e.currentTarget.style.background = '#fff'
-                          e.currentTarget.style.transform = 'none'
-                          e.currentTarget.style.boxShadow = 'none'
-                        }}
-                        >
-                          {/* Assignment Info: "7 Golap - Bangla 1st paper" format */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 250px', minWidth: 0 }}>
-                            <div style={{ 
-                              width: '28px', 
-                              height: '28px', 
-                              borderRadius: '6px', 
-                              background: '#ffedd5', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              fontSize: '12px',
-                              flexShrink: 0
-                            }}>
-                              📚
+                        if (isEditable) {
+                          statusLabel = 'Entry Open'
+                          statusBg = '#ecfdf5'
+                          statusColor = '#059669'
+                          statusIcon = '✍️'
+                        } else if (!a.exams.is_live || !a.exams.teacher_entry_enabled) {
+                          statusLabel = 'Entry closed'
+                          statusBg = '#fff7ed'
+                          statusColor = '#ea580c'
+                          statusIcon = '🚫'
+                        }
+
+                        return (
+                          <Link 
+                            key={a.id} 
+                            to={`/teacher-entry/${a.exam_id}/${a.id}`} 
+                            style={{ textDecoration: 'none', display: 'block', margin: '0 8px' }}
+                          >
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1.2fr 2fr 1fr 1.2fr',
+                              alignItems: 'center',
+                              padding: '12px 14px',
+                              background: '#fff',
+                              border: '1.5px solid #f97316',
+                              borderRadius: '10px',
+                              transition: 'all 0.2s ease-in-out',
+                              gap: '12px'
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.borderColor = '#ea580c'
+                              e.currentTarget.style.background = '#fff7ed'
+                              e.currentTarget.style.transform = 'translateX(4px)'
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.12)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.borderColor = '#f97316'
+                              e.currentTarget.style.background = '#fff'
+                              e.currentTarget.style.transform = 'none'
+                              e.currentTarget.style.boxShadow = 'none'
+                            }}
+                            >
+                              {/* Column 1: Class */}
+                              <div style={{ 
+                                fontSize: '13px', 
+                                fontWeight: 800, 
+                                color: '#ea580c',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <span>{a.class} {formatSection(a.section)}</span>
+                              </div>
+
+                              {/* Column 2: Subject */}
+                              <div style={{ 
+                                fontSize: '13px', 
+                                fontWeight: 700, 
+                                color: '#0f172a'
+                              }}>
+                                {a.subject_name}
+                              </div>
+
+                              {/* Column 3: Subject Code */}
+                              <div style={{ 
+                                fontSize: '12px', 
+                                fontWeight: 700, 
+                                color: '#64748b'
+                              }}>
+                                Code: {a.subject_code}
+                              </div>
+
+                              {/* Column 4: Entry */}
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <div style={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  gap: '5px', 
+                                  padding: '5px 12px', 
+                                  background: statusBg, 
+                                  color: statusColor, 
+                                  borderRadius: '8px', 
+                                  fontSize: '11px', 
+                                  fontWeight: 800,
+                                  border: `1px solid ${statusColor}33`
+                                }}>
+                                  <span>{statusIcon}</span>
+                                  <span>{statusLabel}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div style={{ 
-                              fontSize: '14px', 
-                              fontWeight: 800, 
-                              color: '#ea580c'
-                            }}>
-                              {a.class} {formatSection(a.section)} - {a.subject_name}
-                            </div>
-                          </div>
-
-                          {/* Interactive Badges & Action */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700 }}>Code: {a.subject_code}</span>
-                            
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px', 
-                              padding: '4px 10px', 
-                              background: statusBg, 
-                              color: statusColor, 
-                              borderRadius: '6px', 
-                              fontSize: '10px', 
-                              fontWeight: 800 
-                            }}>
-                              <span>{statusIcon}</span>
-                              <span>{statusLabel}</span>
-                            </div>
-
-
-                          </div>
-                        </div>
-                      </Link>
-                    )
-                  })}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             )
