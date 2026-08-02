@@ -38,6 +38,7 @@ export default function TeacherGradeEntryPage() {
   const [showDetails, setShowDetails] = useState(false)
   const [savingRows, setSavingRows] = useState<Record<string, 'pending' | 'saving' | 'success'>>({})
   const [myAssignments, setMyAssignments] = useState<Assignment[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
   
   const editRef = useRef<Record<string, Record<string, any>>>({})
   
@@ -127,6 +128,7 @@ export default function TeacherGradeEntryPage() {
   async function loadContext() {
     if (!assignId) return
     setLoading(true)
+    setSearchTerm('')
     editRef.current = {}
     setSavingRows({})
     
@@ -221,24 +223,24 @@ export default function TeacherGradeEntryPage() {
     setLoading(false)
   }
 
-  function recalcTotal(ri: number) {
+  function recalcTotal(rowId: number) {
     if (!rule) return
     const base = `*${rule.subject_name}`
+    const ri = data.findIndex(r => Number(r.id) === Number(rowId))
+    if (ri === -1) return
     const row = data[ri]
     const pending = editRef.current[Number(row.id)] || {}
     const total = calculateSubjectTotal(row, pending)
     
     editRef.current[Number(row.id)] = { ...editRef.current[Number(row.id)], [`${base}_Total`]: total }
-    const newData = [...data]
-    newData[ri][`${base}_Total`] = total
-    setData(newData)
+    setData(prev => prev.map(r => Number(r.id) === Number(rowId) ? { ...r, [`${base}_Total`]: total } : r))
   }
 
-  function handleEdit(rowId: number, col: string, value: string, ri: number) {
+  function handleEdit(rowId: number, col: string, value: string) {
     if (!editRef.current[rowId]) editRef.current[rowId] = {}
     editRef.current[rowId][col] = value === '' ? null : Number(value)
     setSavingRows(prev => ({ ...prev, [rowId]: 'pending' }))
-    recalcTotal(ri)
+    recalcTotal(rowId)
 
     const localKey = `unsaved_marks_${examId}_${assignId}`
     localStorage.setItem(localKey, JSON.stringify(editRef.current))
@@ -388,6 +390,15 @@ export default function TeacherGradeEntryPage() {
     { label: 'Practical', key: `${base}_Practical`, pass: rule.pass_practical, editable: totalPractical > 0 },
     { label: 'Total', key: `${base}_Total`, pass: rule.pass_total, editable: isDirectTotalEntry }
   ].filter(c => c.editable || c.label === 'Total')
+
+  const filteredData = data.filter(row => {
+    if (!searchTerm.trim()) return true
+    const term = searchTerm.trim().toLowerCase()
+    const rollStr = String(row.roll ?? '').toLowerCase()
+    const nameStr = String(row.student_name_en ?? '').toLowerCase()
+    const iidStr = String(row.iid ?? '').toLowerCase()
+    return rollStr.includes(term) || nameStr.includes(term) || iidStr.includes(term)
+  })
 
   const fullMarksNum = Number(rule.full_marks) || 0
   const hasAnyRowInvalid = data.some(row => {
@@ -642,6 +653,65 @@ export default function TeacherGradeEntryPage() {
 
         {status && <div style={{ marginBottom: '24px', padding: '16px 24px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '16px', color: '#047857', fontWeight: 800 }}>{status}</div>}
 
+        {/* SEARCH BAR */}
+        <div className="search-bar-container" style={{
+          marginBottom: isMobile ? '12px' : '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          background: '#fff',
+          padding: isMobile ? '8px 12px' : '12px 20px',
+          borderRadius: isMobile ? '12px' : '16px',
+          border: '1.5px solid #e2e8f0',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: isMobile ? '14px' : '18px', color: '#64748b' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Search by roll..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                fontSize: isMobile ? '13px' : '15px',
+                fontWeight: 700,
+                color: '#0f172a',
+                width: '100%',
+                background: 'transparent'
+              }}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  flexShrink: 0
+                }}
+                title="ক্লিয়ার করুন"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: isMobile ? '11px' : '13px', fontWeight: 800, color: '#64748b', whiteSpace: 'nowrap' }}>
+            দেখাচ্ছে: <span style={{ color: '#f97316', fontWeight: 900 }}>{filteredData.length}</span> / {data.length}
+          </div>
+        </div>
+
         <div className="table-wrapper" style={{ background: '#fff', borderRadius: isMobile ? '12px' : '32px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', width: '100%', maxWidth: '100%' }}>
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
             <table className={`responsive-table ${showDetails ? 'with-details' : 'no-details'}`} style={{ width: '100%', minWidth: isMobile ? (showDetails ? '640px' : '100%') : '100%', borderCollapse: 'collapse', fontSize: isMobile ? '13px' : '14px', tableLayout: 'auto' }}>
@@ -664,101 +734,110 @@ export default function TeacherGradeEntryPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.map((row, ri) => {
-                  const totVal = Number(row[`${base}_Total`]) || 0
-                  const isTotOver = fullMarksNum > 0 && totVal > fullMarksNum
-                  const cqVal = Number(row[`${base}_CQ`]) || 0
-                  const isCqOver = totalCq > 0 && cqVal > totalCq
-                  const mcqVal = Number(row[`${base}_MCQ`]) || 0
-                  const isMcqOver = totalMcq > 0 && mcqVal > totalMcq
-                  const pracVal = Number(row[`${base}_Practical`]) || 0
-                  const isPracOver = totalPractical > 0 && pracVal > totalPractical
-                  const isRowInvalid = isTotOver || isCqOver || isMcqOver || isPracOver
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={showDetails ? comps.length + 3 : comps.length + 2} style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontWeight: 700 }}>
+                      🔍 "<strong>{searchTerm}</strong>" রোল বা নামের কোনো শিক্ষার্থী পাওয়া যায়নি।
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((row) => {
+                    const totVal = Number(row[`${base}_Total`]) || 0
+                    const isTotOver = fullMarksNum > 0 && totVal > fullMarksNum
+                    const cqVal = Number(row[`${base}_CQ`]) || 0
+                    const isCqOver = totalCq > 0 && cqVal > totalCq
+                    const mcqVal = Number(row[`${base}_MCQ`]) || 0
+                    const isMcqOver = totalMcq > 0 && mcqVal > totalMcq
+                    const pracVal = Number(row[`${base}_Practical`]) || 0
+                    const isPracOver = totalPractical > 0 && pracVal > totalPractical
+                    const isRowInvalid = isTotOver || isCqOver || isMcqOver || isPracOver
 
-                  return (
-                    <tr key={String(row.id)} style={{ borderBottom: '1px solid #f1f5f9', background: isRowInvalid ? '#fff5f5' : 'transparent' }}>
-                      <td style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: '#1e293b' }}>{String(row.roll ?? '-')}</td>
-                      {showDetails && (
-                        <>
-                          <td style={{ padding: isMobile ? '8px 4px' : '16px', fontWeight: 700, color: '#0f172a', maxWidth: isMobile ? '110px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.student_name_en ?? '-')}</td>
-                          <td style={{ padding: isMobile ? '8px 4px' : '16px', fontSize: '10px', color: '#64748b', maxWidth: isMobile ? '50px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.iid ?? '-')}</td>
-                        </>
-                      )}
-                      {comps.map(c => {
-                        const val = row[c.key]
-                        const numVal = Number(val) || 0
-                        const isFail = c.pass > 0 && numVal > 0 && numVal < c.pass
-                        const compMax = c.label === 'CQ' ? totalCq : c.label === 'MCQ' ? totalMcq : c.label === 'Practical' ? totalPractical : fullMarksNum
-                        const isExceeded = compMax > 0 && numVal > compMax
+                    return (
+                      <tr key={String(row.id)} style={{ borderBottom: '1px solid #f1f5f9', background: isRowInvalid ? '#fff5f5' : 'transparent' }}>
+                        <td style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: '#1e293b' }}>{String(row.roll ?? '-')}</td>
+                        {showDetails && (
+                          <>
+                            <td style={{ padding: isMobile ? '8px 4px' : '16px', fontWeight: 700, color: '#0f172a', maxWidth: isMobile ? '110px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.student_name_en ?? '-')}</td>
+                            <td style={{ padding: isMobile ? '8px 4px' : '16px', fontSize: '10px', color: '#64748b', maxWidth: isMobile ? '50px' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(row.iid ?? '-')}</td>
+                          </>
+                        )}
+                        {comps.map(c => {
+                          const val = row[c.key]
+                          const numVal = Number(val) || 0
+                          const isFail = c.pass > 0 && numVal > 0 && numVal < c.pass
+                          const compMax = c.label === 'CQ' ? totalCq : c.label === 'MCQ' ? totalMcq : c.label === 'Practical' ? totalPractical : fullMarksNum
+                          const isExceeded = compMax > 0 && numVal > compMax
 
-                        if (!c.editable) {
+                          if (!c.editable) {
+                            return (
+                              <td key={c.key} style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: (isTotOver || isFail) ? '#ef4444' : (numVal > 0 ? '#059669' : '#cbd5e1'), fontSize: isMobile ? '14px' : '1.1rem' }}>
+                                {numVal > 0 ? numVal : '-'}
+                                {isTotOver && <span style={{ fontSize: '10px', marginLeft: '4px', color: '#ef4444' }} title="পূর্ণ মান থেকে বেশি">⚠️</span>}
+                              </td>
+                            )
+                          }
                           return (
-                            <td key={c.key} style={{ padding: isMobile ? '8px 4px' : '16px', textAlign: 'center', fontWeight: 900, color: (isTotOver || isFail) ? '#ef4444' : (numVal > 0 ? '#059669' : '#cbd5e1'), fontSize: isMobile ? '14px' : '1.1rem' }}>
-                              {numVal > 0 ? numVal : '-'}
-                              {isTotOver && <span style={{ fontSize: '10px', marginLeft: '4px', color: '#ef4444' }} title="পূর্ণ মান থেকে বেশি">⚠️</span>}
+                            <td key={c.key} style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
+                              <input 
+                                type="number" 
+                                disabled={!isEditable} 
+                                value={val !== null && val !== undefined ? String(val) : ''} 
+                                onChange={e => {
+                                  const newVal = e.target.value
+                                  handleEdit(Number(row.id), c.key, newVal)
+                                  setData(prev => prev.map(r => Number(r.id) === Number(row.id) ? { ...r, [c.key]: newVal === '' ? null : Number(newVal) } : r))
+                                }} 
+                                style={{ 
+                                  width: isMobile ? '48px' : '80px', 
+                                  padding: isMobile ? '5px 3px' : '10px', 
+                                  textAlign: 'center', 
+                                  borderRadius: isMobile ? '6px' : '12px', 
+                                  border: `2px solid ${isExceeded ? '#ef4444' : (isFail ? '#fecaca' : '#e2e8f0')}`, 
+                                  background: isExceeded ? '#fef2f2' : (isFail ? '#fef2f2' : '#f8fafc'), 
+                                  color: isExceeded ? '#ef4444' : (isFail ? '#ef4444' : '#0f172a'), 
+                                  fontWeight: 800, 
+                                  fontSize: isMobile ? '13px' : '15px', 
+                                  outline: 'none' 
+                                }} 
+                              />
                             </td>
                           )
-                        }
-                        return (
-                          <td key={c.key} style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
-                            <input 
-                              type="number" 
-                              disabled={!isEditable} 
-                              value={val !== null && val !== undefined ? String(val) : ''} 
-                              onChange={e => {
-                                handleEdit(Number(row.id), c.key, e.target.value, ri)
-                                const newData = [...data]; newData[ri][c.key] = e.target.value === '' ? null : Number(e.target.value); setData(newData)
-                              }} 
-                              style={{ 
-                                width: isMobile ? '48px' : '80px', 
-                                padding: isMobile ? '5px 3px' : '10px', 
-                                textAlign: 'center', 
-                                borderRadius: isMobile ? '6px' : '12px', 
-                                border: `2px solid ${isExceeded ? '#ef4444' : (isFail ? '#fecaca' : '#e2e8f0')}`, 
-                                background: isExceeded ? '#fef2f2' : (isFail ? '#fef2f2' : '#f8fafc'), 
-                                color: isExceeded ? '#ef4444' : (isFail ? '#ef4444' : '#0f172a'), 
-                                fontWeight: 800, 
-                                fontSize: isMobile ? '13px' : '15px', 
-                                outline: 'none' 
-                              }} 
-                            />
-                          </td>
-                        )
-                      })}
-                      <td className="action-cell" style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
-                        <button 
-                          onClick={() => saveRow(Number(row.id))} 
-                          disabled={savingRows[String(row.id)] === 'saving' || isRowInvalid} 
-                          title={isRowInvalid ? 'পূর্ণ মান থেকে বেশি নম্বর হওয়ায় ডিসএবেল্ড' : ''}
-                          style={{ 
-                            padding: isMobile ? '6px 6px' : '8px 16px', 
-                            borderRadius: isMobile ? '6px' : '10px', 
-                            border: 'none', 
-                            fontWeight: 800, 
-                            fontSize: isMobile ? '9px' : '11px', 
-                            cursor: isRowInvalid ? 'not-allowed' : 'pointer', 
-                            background: isRowInvalid 
-                              ? '#cbd5e1' 
-                              : savingRows[String(row.id)] === 'pending' 
-                                ? '#f59e0b' 
-                                : savingRows[String(row.id)] === 'success' 
-                                  ? '#10b981' 
-                                  : savingRows[String(row.id)] === 'saving' 
-                                    ? '#94a3b8' 
-                                    : '#f1f5f9', 
-                            color: isRowInvalid 
-                              ? '#94a3b8' 
-                              : (savingRows[String(row.id)] === 'pending' || savingRows[String(row.id)] === 'success' || savingRows[String(row.id)] === 'saving') 
-                                ? '#fff' 
-                                : '#64748b' 
-                          }}
-                        >
-                          {savingRows[String(row.id)] === 'saving' ? '...' : savingRows[String(row.id)] === 'success' ? (isMobile ? 'SAVED' : 'SAVED ✅') : 'SAVE'}
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
+                        })}
+                        <td className="action-cell" style={{ padding: isMobile ? '6px 2px' : '12px', textAlign: 'center' }}>
+                          <button 
+                            onClick={() => saveRow(Number(row.id))} 
+                            disabled={savingRows[String(row.id)] === 'saving' || isRowInvalid} 
+                            title={isRowInvalid ? 'পূর্ণ মান থেকে বেশি নম্বর হওয়ায় ডিসএবেল্ড' : ''}
+                            style={{ 
+                              padding: isMobile ? '6px 6px' : '8px 16px', 
+                              borderRadius: isMobile ? '6px' : '10px', 
+                              border: 'none', 
+                              fontWeight: 800, 
+                              fontSize: isMobile ? '9px' : '11px', 
+                              cursor: isRowInvalid ? 'not-allowed' : 'pointer', 
+                              background: isRowInvalid 
+                                ? '#cbd5e1' 
+                                : savingRows[String(row.id)] === 'pending' 
+                                  ? '#f59e0b' 
+                                  : savingRows[String(row.id)] === 'success' 
+                                    ? '#10b981' 
+                                    : savingRows[String(row.id)] === 'saving' 
+                                      ? '#94a3b8' 
+                                      : '#f1f5f9', 
+                              color: isRowInvalid 
+                                ? '#94a3b8' 
+                                : (savingRows[String(row.id)] === 'pending' || savingRows[String(row.id)] === 'success' || savingRows[String(row.id)] === 'saving') 
+                                  ? '#fff' 
+                                  : '#64748b' 
+                            }}
+                          >
+                            {savingRows[String(row.id)] === 'saving' ? '...' : savingRows[String(row.id)] === 'success' ? (isMobile ? 'SAVED' : 'SAVED ✅') : 'SAVE'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
